@@ -1,0 +1,19 @@
+node_modules/
+dist/
+coverage/
+cdk.out/
+.next/
+.turbo/
+*.log
+
+# Secrets: never commit these. Use Doppler or .env.local.
+.env
+.env.*
+!.env.example
+
+# Generated simulator output
+data/*.json
+data/*.ndjson
+!data/.gitkeep
+
+.DS_Store

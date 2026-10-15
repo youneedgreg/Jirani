@@ -1,0 +1,15 @@
+{
+  "name": "@jirani/webhook",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Ring webhook receiver: verifies HMAC signatures, dedupes on meta.request_id, normalises events.",
+  "dependencies": {
+    "@jirani/core": "workspace:*",
+    "@jirani/ring": "workspace:*"
+  },
+  "exports": {
+    ".": "./src/handler.ts"
+  }
+}

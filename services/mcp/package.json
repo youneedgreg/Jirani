@@ -1,0 +1,20 @@
+{
+  "name": "@jirani/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Jirani MCP server (spec 2025-11-25, Streamable HTTP) exposing caregiving tools for an Alexa+-style experience.",
+  "dependencies": {
+    "@jirani/core": "workspace:*",
+    "@jirani/ring": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "express": "^5.1.0",
+    "ring-routine-sim": "workspace:*",
+    "zod": "^3.25.76",
+    "@jirani/webhook": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3"
+  }
+}

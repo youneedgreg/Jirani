@@ -1,0 +1,11 @@
+{
+  "name": "ring-routine-sim",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Generate weeks of realistic Ring-shaped household events with injectable drift, and replay them to any webhook with valid HMAC signatures.",
+  "keywords": ["ring", "amazon-vision", "webhook", "simulator", "caregiving", "testing"],
+  "author": "Gregory Temwa Odete",
+  "exports": { ".": "./src/index.ts" },
+  "bin": { "ring-routine-sim": "./src/cli.ts" }
+}

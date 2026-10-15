@@ -1,0 +1,39 @@
+{
+  "name": "jirani",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Jirani: a privacy-first caregiving agent that learns an older adult's daily rhythm from Ring signals and asks her first.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "sim": "tsx packages/ring-routine-sim/src/cli.ts",
+    "webhook": "tsx services/webhook/src/server.ts",
+    "mcp": "tsx services/mcp/src/server.ts",
+    "demo": "tsx services/mcp/src/demo.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@jirani/core": "workspace:*",
+    "@jirani/ring": "workspace:*",
+    "ring-routine-sim": "workspace:*"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

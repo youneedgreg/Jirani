@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Codecov is free for students (GitHub Student Pack). Add CODECOV_TOKEN to repo secrets to enable uploads.
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm coverage
+      - name: End-to-end demo (webhook + rhythm engine + MCP server)
+        run: pnpm demo
+      - uses: codecov/codecov-action@v5
+        if: env.CODECOV_TOKEN != ''
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          files: coverage/lcov.info

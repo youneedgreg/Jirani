@@ -1,0 +1,9 @@
+{
+  "name": "@jirani/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Rhythm baseline, deviation scoring, context memory and the escalation ladder. Pure TypeScript, no I/O, no LLM.",
+  "exports": { ".": "./src/index.ts" }
+}
