@@ -5,17 +5,21 @@
   "type": "module",
   "license": "MIT",
   "description": "AWS runtime for Jirani: DynamoDB store and Lambda handlers (webhook, API/MCP, scheduled evaluation).",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1150.0",
     "@aws-sdk/client-secrets-manager": "^3.1150.0",
     "@aws-sdk/lib-dynamodb": "^3.1150.0",
+    "@jirani/agent": "workspace:*",
     "@jirani/core": "workspace:*",
     "@jirani/mcp": "workspace:*",
     "@jirani/webhook": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.17.0"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.160"
+    "@types/aws-lambda": "^8.10.160",
+    "ring-routine-sim": "workspace:*"
   }
 }

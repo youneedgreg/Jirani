@@ -1,6 +1,6 @@
 import type { LambdaFunctionURLEvent, LambdaFunctionURLResult } from 'aws-lambda';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import { buildMcpServer, dashboardReport, dashboardState, evaluateNow } from '@jirani/mcp';
+import { buildMcpServer, clockInfo, dashboardReport, dashboardState, evaluateNow } from '@jirani/mcp';
 import { withStore, type DynamoStore } from '../dynamo-store.ts';
 import { apiToken, bearerMatches, documentClient, household, requireEnv } from '../config.ts';
 
@@ -12,6 +12,7 @@ import { apiToken, bearerMatches, documentClient, household, requireEnv } from '
  *   POST /mcp                MCP, spec 2025-11-25, stateless Streamable HTTP (JSON responses)
  *   GET  /api/state          dashboard: today, open alerts, outbox
  *   GET  /api/report         weekly drift report
+ *   GET  /api/now            Jirani's clock and time zone (for the agent)
  *   POST /internal/evaluate  run the rhythm engine + ladder now
  *   POST /demo/clock         {"now": ISO | null}; only when JIRANI_DEMO=1
  */
@@ -74,6 +75,7 @@ export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunc
     }
     if (method === 'GET' && path === '/api/state') return json(200, await run(dashboardState));
     if (method === 'GET' && path === '/api/report') return json(200, await run(dashboardReport));
+    if (method === 'GET' && path === '/api/now') return json(200, await run(clockInfo));
     if (method === 'POST' && path === '/internal/evaluate') return json(200, await run(evaluateNow));
     if (demo && method === 'POST' && path === '/demo/clock') {
       const now = (JSON.parse(rawBody(event) ?? '{}') as { now?: string | null }).now ?? null;

@@ -25,10 +25,21 @@ describe('JiraniStack', () => {
     });
   });
 
-  it('runs three Node 22 arm64 functions, two of them behind Function URLs', () => {
-    t.resourceCountIs('AWS::Lambda::Function', 3);
+  it('runs four Node 22 arm64 functions, three of them behind Function URLs', () => {
+    t.resourceCountIs('AWS::Lambda::Function', 4);
     t.allResourcesProperties('AWS::Lambda::Function', { Runtime: 'nodejs22.x', Architectures: ['arm64'] });
-    t.resourceCountIs('AWS::Lambda::Url', 2);
+    t.resourceCountIs('AWS::Lambda::Url', 3);
+  });
+
+  it('lets only the agent call Bedrock', () => {
+    const bedrock = Object.values(t.findResources('AWS::IAM::Policy')).filter((p) =>
+      JSON.stringify(p).includes('bedrock:InvokeModel'),
+    );
+    expect(bedrock).toHaveLength(1);
+    expect(JSON.stringify(bedrock[0])).toContain('AgentFn');
+    synth({ bedrockModelId: 'us.example-model' }).hasResourceProperties('AWS::Lambda::Function', {
+      Environment: { Variables: Match.objectLike({ BEDROCK_MODEL_ID: 'us.example-model' }) },
+    });
   });
 
   it('keeps secrets in Secrets Manager, passing only ARNs to the functions', () => {

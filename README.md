@@ -61,6 +61,15 @@ Spec **2025-11-25**, **Streamable HTTP**, stateless (`POST /mcp`). Run it with `
 | `view_front_door` | Amina | Ring live view, only at Level 3+ and only with consent |
 | `usual_routine` | anyone | The learned baseline in plain words |
 
+## The agent (Amazon Bedrock)
+
+A [Strands](https://strandsagents.com) agent on Amazon Bedrock (Claude Sonnet 5.5) answers Margaret and Amina in a sentence or two. It can only reach Jirani through the MCP server above, and only with the tools allowed for whoever is speaking: Margaret's pause control isn't available to family, and the front-door camera isn't a tool on her side. It must cite what the tools returned, say "I don't know" otherwise, and never diagnose.
+
+```bash
+pnpm ask "How's Mum this week?"                       # needs AWS credentials with Bedrock access
+pnpm ask --as resident "I'm at my sister's Saturday"
+```
+
 ## Repository
 
 ```
@@ -69,15 +78,17 @@ packages/ring              Ring Partner API client, webhook schemas, HMAC-SHA256
 packages/ring-routine-sim  weeks of Ring-shaped household events + signed replay (published separately, MIT)
 services/webhook           framework-agnostic Ring webhook handler (Express locally, Lambda in AWS)
 services/mcp               MCP server, dashboard API, local runtime, the demo
-services/aws               DynamoDB store + Lambda handlers (webhook, MCP/API, scheduled evaluation)
-infra/                     AWS CDK app: DynamoDB, Lambda + Function URLs, EventBridge Scheduler, Secrets Manager
+services/agent             Strands agent on Bedrock that answers through the MCP server
+services/aws               DynamoDB store + Lambda handlers (webhook, MCP/API, agent, scheduled evaluation)
+infra/                     AWS CDK app: DynamoDB, Lambda + Function URLs, Bedrock access, EventBridge Scheduler, Secrets Manager
 docs/                      aws.md, feedback.md, friction-log.md
 ```
 
 | Command | What it does |
 | --- | --- |
 | `pnpm demo` | The whole story end to end |
-| `pnpm test` / `pnpm coverage` | Six roadmap scenarios, ladder, drift statistics, webhook, MCP, CDK stack |
+| `pnpm test` / `pnpm coverage` | Six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack |
+| `pnpm ask "<question>"` | Ask the Bedrock agent (`--as resident` for Margaret's side) |
 | `pnpm ddb:local` + `pnpm test:aws` | DynamoDB store and all three Lambda handlers, end to end on DynamoDB Local |
 | `pnpm aws:deploy` / `pnpm aws:destroy` | Deploy to / remove from your AWS account (see [docs/aws.md](docs/aws.md)) |
 | `pnpm mcp` | Local server: `/mcp`, `/ring/webhook`, `/api/state`, `/api/report` |
@@ -87,7 +98,7 @@ docs/                      aws.md, feedback.md, friction-log.md
 
 ## Status
 
-Built during the hackathon submission window. Working today: the core engine, Ring webhook verification, the Ring API client, the simulator, the MCP server, the end-to-end demo, and the AWS stack in CDK (DynamoDB, three Lambda functions with Function URLs, EventBridge Scheduler, Secrets Manager), tested against DynamoDB Local. In progress: the first real deployment, the Strands agent on Bedrock, email via SES, the family dashboard and voice client, the Fire TV check-in card, and live Ring Developer Playground integration.
+Built during the hackathon submission window. Working today: the core engine, Ring webhook verification, the Ring API client, the simulator, the MCP server, the end-to-end demo, the AWS stack in CDK (DynamoDB, four Lambda functions with Function URLs, EventBridge Scheduler, Secrets Manager), tested against DynamoDB Local, and the Strands agent, tested with a scripted stand-in model. In progress: the first real deployment and the first real Bedrock run, email via SES, the family dashboard and voice client, the Fire TV check-in card, and live Ring Developer Playground integration.
 
 **Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in the Ring webhook v1.1 shape, signed exactly like Ring signs webhooks. Contact-sensor event names are an assumption until confirmed against Ring's docs.
 

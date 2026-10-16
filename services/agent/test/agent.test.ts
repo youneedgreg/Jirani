@@ -1,0 +1,102 @@
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { fromLocal } from '@jirani/core';
+import { demoHousehold, MemoryStore } from '@jirani/mcp';
+import { createApp } from '@jirani/mcp/app';
+import { generate, PRESETS, replay } from 'ring-routine-sim';
+import { ask, fetchClock, systemPrompt, TOOLS } from '../src/index.ts';
+import { lastToolResults, ScriptedModel } from '../src/testing.ts';
+
+/**
+ * The real Strands agent loop against the real MCP server, with a scripted model
+ * standing in for Bedrock. It checks the wiring (tools offered, calls made,
+ * results returned, prompt rules), not the model's judgement.
+ */
+const KEY = 'agent-test-key';
+const TZ = 'America/New_York';
+const thursday = new Date(fromLocal(TZ, '2026-10-15', 18 * 60)).toISOString();
+
+let server: Server;
+let mcpUrl: string;
+const store = new MemoryStore(demoHousehold());
+
+beforeAll(async () => {
+  server = createApp(store, { hmacKey: KEY, demo: true }).listen(0, '127.0.0.1');
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  mcpUrl = `${base}/mcp`;
+  const events = generate(PRESETS.demo!.options).filter((e) => e.at <= thursday);
+  await replay(events, { url: `${base}/ring/webhook`, hmacKey: KEY });
+  store.setClock(thursday);
+}, 60_000);
+afterAll(() => server.close());
+
+const opts = async (model: ScriptedModel, speaker: 'resident' | 'family') => ({
+  mcpUrl,
+  speaker,
+  model,
+  ...(await fetchClock(mcpUrl)),
+});
+
+describe('Jirani agent (Strands + MCP)', () => {
+  it('reads the clock and time zone from Jirani', async () => {
+    expect(await fetchClock(mcpUrl)).toEqual({ now: thursday, timeZone: TZ, residentName: 'Margaret' });
+  });
+
+  it('answers family questions from tool results, offering only family tools', async () => {
+    const model = new ScriptedModel([{ tool: 'usual_routine' }, { text: 'She is usually up around 7:15.' }]);
+    const r = await ask('What is Mum’s usual routine?', await opts(model, 'family'));
+
+    expect(model.calls[0]!.tools).toEqual([...TOOLS.family].sort());
+    expect(r.toolCalls).toEqual([{ name: 'usual_routine', input: {} }]);
+    const [result] = lastToolResults(model);
+    expect(result).toMatchObject({ status: 'success' });
+    expect(result!.text).toMatch(/Learned from \d+ days/);
+    expect(r.answer).toBe('She is usually up around 7:15.');
+  });
+
+  it('acts for Margaret through MCP: her plan is saved in Jirani', async () => {
+    const model = new ScriptedModel([
+      {
+        tool: 'tell_jirani',
+        input: { kind: 'away', text: "At my sister's Saturday", starts_at: '2026-10-17 08:00', ends_at: '2026-10-17 20:00', created_by: 'resident' },
+      },
+      { text: "Got it, enjoy your sister's." },
+    ]);
+    const r = await ask("I'm at my sister's on Saturday", await opts(model, 'resident'));
+
+    expect(model.calls[0]!.tools).toEqual([...TOOLS.resident].sort());
+    expect(r.toolCalls.map((c) => c.name)).toEqual(['tell_jirani']);
+    expect(store.state().contexts.at(-1)).toMatchObject({ kind: 'away', text: "At my sister's Saturday", createdBy: 'resident' });
+  });
+
+  it("can't use a tool outside the speaker's set, even if the model tries", async () => {
+    const model = new ScriptedModel([{ tool: 'view_front_door' }, { text: 'I can’t do that.' }]);
+    await ask('Show me the front door', await opts(model, 'resident'));
+    const [result] = lastToolResults(model);
+    expect(result?.status).toBe('error');
+  });
+
+  it('gives the model the rules and the household’s local time', () => {
+    const p = systemPrompt({ speaker: 'family', residentName: 'Margaret', now: thursday, timeZone: TZ });
+    expect(p).toContain('Thursday, October 15, 2026');
+    expect(p).toContain('6:00 PM');
+    expect(p).toMatch(/Only state facts that a tool returned/);
+    expect(p).toMatch(/Never diagnose/);
+    expect(p).toMatch(/never contacts emergency services/);
+  });
+
+  it('fails loudly when the MCP server refuses it, instead of answering without tools', async () => {
+    const refusing = createServer((_req, res) => res.writeHead(401, { 'content-type': 'application/json' }).end('{"error":"unauthorized"}'));
+    refusing.listen(0, '127.0.0.1');
+    await new Promise((r) => refusing.once('listening', r));
+    const url = `http://127.0.0.1:${(refusing.address() as AddressInfo).port}/mcp`;
+    const model = new ScriptedModel([{ text: 'should never be asked' }]);
+    await expect(
+      ask('How is she?', { mcpUrl: url, apiToken: 'wrong', speaker: 'family', residentName: 'Margaret', now: thursday, timeZone: TZ, model }),
+    ).rejects.toThrow();
+    expect(model.calls).toHaveLength(0);
+    refusing.close();
+  });
+});

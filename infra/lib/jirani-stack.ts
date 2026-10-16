@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib';
 import * as budgets from 'aws-cdk-lib/aws-budgets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -22,6 +23,8 @@ export interface JiraniStackProps extends StackProps {
   evaluateEveryMinutes?: number;
   /** If set, an AWS Budgets alert emails this address at 80% and 100% of $10/month. */
   budgetEmail?: string;
+  /** Bedrock model or inference profile ID for the agent. Defaults to the agent's built-in choice. */
+  bedrockModelId?: string;
 }
 
 /**
@@ -55,7 +58,11 @@ export class JiraniStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    const fn = (name: string, file: string, opts: { memorySize: number; timeout: Duration; environment?: Record<string, string> }) =>
+    const fn = (
+      name: string,
+      file: string,
+      opts: { memorySize: number; timeout: Duration; environment?: Record<string, string>; bundleAwsSdk?: boolean },
+    ) =>
       new NodejsFunction(this, name, {
         entry: join(repoRoot, 'services/aws/src/lambda', file),
         projectRoot: repoRoot,
@@ -77,6 +84,8 @@ export class JiraniStack extends Stack {
           mainFields: ['module', 'main'],
           // Some CommonJS dependencies call require(); give the ESM bundle one.
           banner: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);",
+          // By default the Lambda runtime's own AWS SDK is used; bundle it when a dependency needs a newer one.
+          ...(opts.bundleAwsSdk ? { externalModules: [] } : {}),
         },
       });
 
@@ -120,6 +129,35 @@ export class JiraniStack extends Stack {
       });
     }
 
+    // The agent: a Strands agent on Bedrock that answers through the MCP server above.
+    const agent = fn('AgentFn', 'agent.ts', {
+      memorySize: 512,
+      timeout: Duration.seconds(60),
+      bundleAwsSdk: true,
+      environment: {
+        API_TOKEN_SECRET_ARN: apiToken.secretArn,
+        JIRANI_API_URL: apiUrl.url,
+        ...(props.bedrockModelId ? { BEDROCK_MODEL_ID: props.bedrockModelId } : {}),
+      },
+    });
+    apiToken.grantRead(agent);
+    agent.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+        // Foundation models and cross-region inference profiles, so either kind of model ID works.
+        resources: [`arn:aws:bedrock:*::foundation-model/*`, `arn:aws:bedrock:*:${this.account}:inference-profile/*`],
+      }),
+    );
+    const agentUrl = agent.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedOrigins: props.corsOrigins ?? ['http://localhost:3000'],
+        allowedMethods: [lambda.HttpMethod.POST],
+        allowedHeaders: ['authorization', 'content-type'],
+        maxAge: Duration.hours(1),
+      },
+    });
+
     if (props.budgetEmail) {
       new budgets.CfnBudget(this, 'Budget', {
         budget: { budgetType: 'COST', timeUnit: 'MONTHLY', budgetLimit: { amount: 10, unit: 'USD' } },
@@ -133,6 +171,7 @@ export class JiraniStack extends Stack {
     new CfnOutput(this, 'WebhookUrl', { value: `${webhookUrl.url}ring/webhook`, description: 'Point Ring (or ring-routine-sim replay) here' });
     new CfnOutput(this, 'McpUrl', { value: `${apiUrl.url}mcp`, description: 'MCP server, Streamable HTTP' });
     new CfnOutput(this, 'ApiUrl', { value: apiUrl.url });
+    new CfnOutput(this, 'AskUrl', { value: `${agentUrl.url}ask`, description: 'POST {"question", "as"} to the Bedrock agent' });
     new CfnOutput(this, 'TableName', { value: table.tableName });
     new CfnOutput(this, 'RingHmacKeySecret', { value: ringHmacKey.secretName });
     new CfnOutput(this, 'ApiTokenSecret', { value: apiToken.secretName });
