@@ -4,6 +4,7 @@ import {
   buildBaseline,
   fromLocal,
   hhmm,
+  reportSummary,
   respond,
   summariseDay,
   toLocal,
@@ -225,15 +226,7 @@ export function buildMcpServer(store: Store): McpServer {
     async () => {
       const s = store.state();
       const report = weeklyReport(h(), s.events, store.now(), s.contexts);
-      const flagged = report.metrics.filter((m) => m.flagged);
-      // The headline lists the flagged labels for a card; spoken, the sentences already name them.
-      const lead = flagged.length
-        ? `${flagged.length === 1 ? 'One change' : `${flagged.length} changes`} worth noticing this week.`
-        : report.headline;
-      const text = [lead, ...flagged.map((m) => m.sentence), report.suggestion ?? '']
-        .filter(Boolean)
-        .join(' ');
-      return speak(text, { report });
+      return speak(reportSummary(report), { report });
     },
   );
 

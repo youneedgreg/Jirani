@@ -47,9 +47,21 @@ export function secret(directEnv: string, arnEnv: string): Promise<string> {
 export const ringHmacKey = () => secret('RING_HMAC_KEY', 'RING_HMAC_SECRET_ARN');
 export const apiToken = () => secret('JIRANI_API_TOKEN', 'API_TOKEN_SECRET_ARN');
 
-/** The household this deployment looks after. One demo household for now. */
-export function household(): Household {
-  return demoHousehold();
+/**
+ * The household this deployment looks after. One demo household for now, with
+ * real email addresses for its contacts from JIRANI_CONTACT_EMAILS
+ * ("joe=you+joe@example.com,amina=you+amina@example.com").
+ */
+export function household(contactEmails = process.env.JIRANI_CONTACT_EMAILS): Household {
+  const h = demoHousehold();
+  if (!contactEmails) return h;
+  const emails = new Map(
+    contactEmails
+      .split(',')
+      .map((pair) => pair.split('=').map((s) => s.trim()))
+      .filter((kv): kv is [string, string] => kv.length === 2 && !!kv[0] && !!kv[1]),
+  );
+  return { ...h, contacts: h.contacts.map((c) => (emails.has(c.id) ? { ...c, email: emails.get(c.id)! } : c)) };
 }
 
 /** Constant-time check of an `Authorization: Bearer <token>` header. */

@@ -141,3 +141,13 @@ export function weeklyReport(
   }
   return base;
 }
+
+/** The report as a few plain sentences: what the weekly_report tool says and the weekly email leads with. */
+export function reportSummary(report: WeeklyReport): string {
+  const flagged = report.metrics.filter((m) => m.flagged);
+  // The headline lists the flagged labels for a card; spoken, the sentences already name them.
+  const lead = flagged.length
+    ? `${flagged.length === 1 ? 'One change' : `${flagged.length} changes`} worth noticing this week.`
+    : report.headline;
+  return [lead, ...flagged.map((m) => m.sentence), report.suggestion ?? ''].filter(Boolean).join(' ');
+}

@@ -8,6 +8,8 @@ import { JiraniStack } from '../lib/jirani-stack.ts';
  * cdk deploy -c evaluateEveryMinutes=0         remove the schedule (no recurring compute)
  * cdk deploy -c budgetEmail=you@example.com    $10/month AWS Budgets alert
  * cdk deploy -c bedrockModelId=<id>            use another Bedrock model or inference profile for the agent
+ * cdk deploy -c senderEmail=jirani@you.com -c contactEmails=joe=a@x.com,amina=b@x.com -c dashboardUrl=https://...
+ *                                              email escalation messages (SES) and the weekly report
  */
 const app = new App();
 const ctx = (k: string): string | undefined => app.node.tryGetContext(k);
@@ -19,5 +21,8 @@ new JiraniStack(app, 'Jirani', {
   ...(ctx('evaluateEveryMinutes') !== undefined ? { evaluateEveryMinutes: Number(ctx('evaluateEveryMinutes')) } : {}),
   ...(ctx('budgetEmail') ? { budgetEmail: ctx('budgetEmail')! } : {}),
   ...(ctx('bedrockModelId') ? { bedrockModelId: ctx('bedrockModelId')! } : {}),
+  ...(ctx('senderEmail') ? { senderEmail: ctx('senderEmail')! } : {}),
+  ...(ctx('contactEmails') ? { contactEmails: ctx('contactEmails')! } : {}),
+  ...(ctx('dashboardUrl') ? { dashboardUrl: ctx('dashboardUrl')! } : {}),
   description: 'Jirani: privacy-first caregiving agent (Ring + Alexa+ hackathon entry)',
 });

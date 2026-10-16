@@ -21,6 +21,7 @@ Voice client / dashboard ──Bearer──▶ AgentFn (/ask) ──Converse─�
 | Agent | Lambda + Function URL running a Strands agent on Amazon Bedrock; it reaches Jirani only through the MCP server, with per-speaker tool filters | `services/aws/src/lambda/agent.ts`, `services/agent/src/agent.ts` |
 | Rhythm engine heartbeat | Lambda, invoked by EventBridge Scheduler (`rate(1 minute)` by default) | `services/aws/src/lambda/evaluate.ts` |
 | State | DynamoDB, single table, on-demand, TTL on idempotency keys | `services/aws/src/dynamo-store.ts` |
+| Email | DynamoDB Stream on new outbox items → NotifyFn → Amazon SES; WeeklyFn on an EventBridge Scheduler cron (optional, `-c senderEmail`) | `services/aws/src/notify.ts`, `services/aws/src/lambda/notify.ts`, `weekly.ts` |
 | Secrets | Secrets Manager: Ring HMAC key + API token, generated at deploy; functions get only the ARNs | `services/aws/src/config.ts` |
 | Logs | CloudWatch log group per function, 1-week retention | `infra/lib/jirani-stack.ts` |
 | Cost guard | Optional AWS Budgets alert at $10/month (`-c budgetEmail=...`) | `infra/lib/jirani-stack.ts` |
@@ -73,6 +74,7 @@ Options (append them directly, e.g. `pnpm aws:deploy -c demo=true`; with `--` in
 | `-c corsOrigins=https://jirani.app,http://localhost:3000` | Browser origins for the dashboard and voice client |
 | `-c evaluateEveryMinutes=0` | Removes the schedule (nothing recurring left) |
 | `-c budgetEmail=you@example.com` | $10/month AWS Budgets alert at 80% and 100% |
+| `-c senderEmail=... -c contactEmails=... -c dashboardUrl=...` | Email escalation messages and the weekly report through SES (see Email below) |
 | `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `anthropic.claude-sonnet-5-5`) |
 
 The deploy prints `WebhookUrl`, `McpUrl`, `ApiUrl`, `AskUrl` and the two secret names. Read the secrets with:
@@ -121,6 +123,40 @@ With a real Ring app, replace the generated HMAC key with the one Ring issued:
 
 Tear everything down, data included: `pnpm aws:destroy`.
 
+## Email (Amazon SES)
+
+Optional: deployed only with `-c senderEmail=...`. Without it, messages stay in the outbox
+and show on the dashboard (`/api/state`), and nothing is emailed.
+
+```
+ladder decides ─▶ OUT# item (same transaction as the escalation) ─▶ DynamoDB Stream (INSERT, SK begins with OUT#)
+  ─▶ NotifyFn ─▶ Amazon SES ─▶ Joe / Amina        and every Sunday 6pm (New York time): WeeklyFn ─▶ family
+```
+
+- Escalation steps never wait on email: the ladder writes the message, and the notifier sends it.
+  A failed send is retried for that record only (`ReportBatchItemFailures`), up to 5 times.
+- Each item is marked `emailedAt` after sending and skipped if already marked, so a stream
+  redelivery doesn't email twice. If the mark itself fails after a send, a retry can send a
+  duplicate (at-least-once).
+- Margaret's own check-ins are not emailed; she's reached by voice and on the TV. `family`
+  messages (live-view offer) go to every family contact.
+
+Setup (SES starts in the sandbox: both the sender and every recipient must be verified):
+
+```bash
+aws sesv2 create-email-identity --email-identity jirani@yourdomain.com      # sender
+aws sesv2 create-email-identity --email-identity you+joe@gmail.com           # each recipient, in the sandbox
+aws sesv2 create-email-identity --email-identity you+amina@gmail.com
+# click the verification link in each email, then:
+pnpm aws:deploy -c senderEmail=jirani@yourdomain.com \
+  -c contactEmails=joe=you+joe@gmail.com,amina=you+amina@gmail.com \
+  -c dashboardUrl=https://your-dashboard-url
+```
+
+Context values are not remembered between deploys: pass the same `-c` flags every time, or put
+them in `infra/cdk.context.json` (git-ignored, since it would hold personal email addresses):
+`{"senderEmail": "...", "contactEmails": "...", "dashboardUrl": "..."}`.
+
 ## Cost
 
 Rough, not measured yet. Bedrock is billed per token for each `/ask`; nothing calls it on a
@@ -152,6 +188,5 @@ with DynamoDB Local as a service container.
 
 | Piece | Plan |
 | --- | --- |
-| Messages | Amazon SES (sandbox, verified addresses). Today messages are stored in the outbox (`OUT#` items) and shown in `/api/state`; nothing is emailed |
 | Ladder timers | One-off EventBridge Scheduler schedules per escalation step, instead of the every-minute heartbeat |
 | Households | One demo household is built into the code (`demoHousehold()`); multi-household config is not done |
