@@ -5,9 +5,8 @@ import {
   localhostHostValidation,
 } from '@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js';
 import { handleRingWebhook } from '@jirani/webhook';
-import { summariseDay, weeklyReport } from '@jirani/core';
 import { buildMcpServer } from './tools.ts';
-import { runEvaluation } from './runtime.ts';
+import { dashboardReport, dashboardState, evaluateNow } from './api.ts';
 import type { Store } from './store.ts';
 
 export interface AppOptions {
@@ -74,30 +73,11 @@ export function createApp(store: Store, opts: AppOptions) {
   app.delete('/mcp', notAllowed);
 
   // Read API for the family dashboard.
-  app.get('/api/state', (_req, res) => {
-    const ev = runEvaluation(store);
-    const s = store.state();
-    res.json({
-      now: store.now(),
-      household: { id: s.household.id, residentName: s.household.residentName, timeZone: s.household.timeZone },
-      summary: summariseDay(s.household, s.events, ev.baseline, s.escalations, s.contexts, store.now(), ev.notices),
-      escalations: s.escalations.filter((e) => e.status !== 'logged'),
-      suppressed: ev.suppressed.map((x) => ({ summary: x.deviation.summary, reason: x.reason })),
-      notices: ev.notices,
-      outbox: store.outbox().slice(-50),
-      paused: s.pause && Date.parse(s.pause.until) > Date.parse(store.now()) ? { until: s.pause.until } : null,
-    });
-  });
-  app.get('/api/report', (_req, res) => {
-    const s = store.state();
-    res.json(weeklyReport(s.household, s.events, store.now(), s.contexts));
-  });
+  app.get('/api/state', (_req, res) => void res.json(dashboardState(store)));
+  app.get('/api/report', (_req, res) => void res.json(dashboardReport(store)));
 
   // The runtime trigger. EventBridge Scheduler calls the Lambda equivalent.
-  app.post('/internal/evaluate', (_req, res) => {
-    const ev = runEvaluation(store);
-    res.json({ now: store.now(), actions: ev.actions, deviations: ev.deviations, notices: ev.notices });
-  });
+  app.post('/internal/evaluate', (_req, res) => void res.json(evaluateNow(store)));
 
   if (opts.demo) {
     app.post('/demo/clock', express.json(), (req, res) => {

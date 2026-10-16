@@ -69,13 +69,17 @@ packages/ring              Ring Partner API client, webhook schemas, HMAC-SHA256
 packages/ring-routine-sim  weeks of Ring-shaped household events + signed replay (published separately, MIT)
 services/webhook           framework-agnostic Ring webhook handler (Express locally, Lambda in AWS)
 services/mcp               MCP server, dashboard API, local runtime, the demo
+services/aws               DynamoDB store + Lambda handlers (webhook, MCP/API, scheduled evaluation)
+infra/                     AWS CDK app: DynamoDB, Lambda + Function URLs, EventBridge Scheduler, Secrets Manager
 docs/                      aws.md, feedback.md, friction-log.md
 ```
 
 | Command | What it does |
 | --- | --- |
 | `pnpm demo` | The whole story end to end |
-| `pnpm test` / `pnpm coverage` | 42 tests: six roadmap scenarios, ladder, drift statistics, webhook, MCP |
+| `pnpm test` / `pnpm coverage` | Six roadmap scenarios, ladder, drift statistics, webhook, MCP, CDK stack |
+| `pnpm ddb:local` + `pnpm test:aws` | DynamoDB store and all three Lambda handlers, end to end on DynamoDB Local |
+| `pnpm aws:deploy` / `pnpm aws:destroy` | Deploy to / remove from your AWS account (see [docs/aws.md](docs/aws.md)) |
 | `pnpm mcp` | Local server: `/mcp`, `/ring/webhook`, `/api/state`, `/api/report` |
 | `pnpm sim presets` | List simulated households |
 | `pnpm sim generate --preset demo --out data/demo.ndjson` | Generate events |
@@ -83,7 +87,7 @@ docs/                      aws.md, feedback.md, friction-log.md
 
 ## Status
 
-Built during the hackathon submission window. Working today: the core engine, Ring webhook verification, the Ring API client, the simulator, the MCP server and the end-to-end demo. In progress (see `docs/aws.md`): AWS deployment (Lambda, DynamoDB, EventBridge Scheduler, CDK), the Strands agent on Bedrock, the family dashboard and voice client, the Fire TV check-in card, and live Ring Developer Playground integration.
+Built during the hackathon submission window. Working today: the core engine, Ring webhook verification, the Ring API client, the simulator, the MCP server, the end-to-end demo, and the AWS stack in CDK (DynamoDB, three Lambda functions with Function URLs, EventBridge Scheduler, Secrets Manager), tested against DynamoDB Local. In progress: the first real deployment, the Strands agent on Bedrock, email via SES, the family dashboard and voice client, the Fire TV check-in card, and live Ring Developer Playground integration.
 
 **Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in the Ring webhook v1.1 shape, signed exactly like Ring signs webhooks. Contact-sensor event names are an assumption until confirmed against Ring's docs.
 

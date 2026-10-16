@@ -8,7 +8,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      # Lets the DynamoDB store and Lambda handler tests run for real.
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports: ['8000:8000']
     env:
+      DYNAMODB_ENDPOINT: http://localhost:8000
       # Codecov is free for students (GitHub Student Pack). Add CODECOV_TOKEN to repo secrets to enable uploads.
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
@@ -21,6 +27,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm coverage
+      - name: CDK synth (bundles all three Lambda functions)
+        run: pnpm aws:synth
       - name: End-to-end demo (webhook + rhythm engine + MCP server)
         run: pnpm demo
       - uses: codecov/codecov-action@v5
