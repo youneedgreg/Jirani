@@ -23,6 +23,12 @@ export function dashboardState(store: Store) {
   };
 }
 
+/** GET /api/now: Jirani's clock (the demo clock when set) and the household's time zone, for the agent. */
+export function clockInfo(store: Store) {
+  const h = store.household();
+  return { now: store.now(), timeZone: h.timeZone, residentName: h.residentName };
+}
+
 /** GET /api/report */
 export function dashboardReport(store: Store) {
   const s = store.state();

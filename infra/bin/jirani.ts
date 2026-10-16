@@ -7,6 +7,7 @@ import { JiraniStack } from '../lib/jirani-stack.ts';
  * cdk deploy -c corsOrigins=https://jirani.app,http://localhost:3000
  * cdk deploy -c evaluateEveryMinutes=0         remove the schedule (no recurring compute)
  * cdk deploy -c budgetEmail=you@example.com    $10/month AWS Budgets alert
+ * cdk deploy -c bedrockModelId=<id>            use another Bedrock model or inference profile for the agent
  */
 const app = new App();
 const ctx = (k: string): string | undefined => app.node.tryGetContext(k);
@@ -17,5 +18,6 @@ new JiraniStack(app, 'Jirani', {
   ...(ctx('corsOrigins') ? { corsOrigins: ctx('corsOrigins')!.split(',').map((s) => s.trim()) } : {}),
   ...(ctx('evaluateEveryMinutes') !== undefined ? { evaluateEveryMinutes: Number(ctx('evaluateEveryMinutes')) } : {}),
   ...(ctx('budgetEmail') ? { budgetEmail: ctx('budgetEmail')! } : {}),
+  ...(ctx('bedrockModelId') ? { bedrockModelId: ctx('bedrockModelId')! } : {}),
   description: 'Jirani: privacy-first caregiving agent (Ring + Alexa+ hackathon entry)',
 });

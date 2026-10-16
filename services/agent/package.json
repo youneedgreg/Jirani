@@ -1,0 +1,22 @@
+{
+  "name": "@jirani/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Jirani's agent: a Strands agent on Amazon Bedrock that answers Margaret and Amina by calling Jirani's MCP server.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@strands-agents/sdk": "^1.21.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@jirani/core": "workspace:*",
+    "@jirani/mcp": "workspace:*",
+    "ring-routine-sim": "workspace:*"
+  }
+}

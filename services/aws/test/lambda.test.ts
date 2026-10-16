@@ -4,6 +4,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { fromLocal } from '@jirani/core';
 import { generate, PRESETS, replay, sign, toEnvelope } from 'ring-routine-sim';
+import { ScriptedModel } from '@jirani/agent/testing';
 import { createTable, endpoint, functionUrl, useLocalAws } from './helpers.ts';
 
 /**
@@ -51,6 +52,7 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
     servers.push(webhook.server, apiFn.server);
     webhookUrl = `${webhook.url}/ring/webhook`;
     apiUrl = apiFn.url;
+    process.env.JIRANI_API_URL = `${apiUrl}/`;
 
     const transport = new StreamableHTTPClientTransport(new URL(`${apiUrl}/mcp`), {
       requestInit: { headers: { authorization: `Bearer ${TOKEN}` } },
@@ -147,4 +149,29 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
     const report = await call('weekly_report');
     expect(report.text).toMatch(/Night-time bathroom trips/);
   }, 120_000);
+
+  it('answers through the Bedrock agent endpoint, which calls the MCP server with the token', async () => {
+    const { createAgentHandler } = await import('../src/lambda/agent.ts');
+    const model = new ScriptedModel([{ tool: 'why_alert' }, { text: 'Joe found her in the garden.' }]);
+    const agent = await functionUrl(createAgentHandler(() => model));
+    servers.push(agent.server);
+    const askAgent = (body: unknown, token: string | null = TOKEN) =>
+      fetch(`${agent.url}/ask`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+
+    expect((await askAgent({ question: 'Why did you alert me?' }, null)).status).toBe(401);
+    expect((await askAgent({ question: '' })).status).toBe(400);
+    expect((await askAgent({ question: 'Hi', as: 'neighbour' })).status).toBe(400);
+
+    const res = await askAgent({ question: 'Why did you alert me?', as: 'family' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ answer: 'Joe found her in the garden.', toolCalls: [{ name: 'why_alert', input: {} }] });
+    // The tool result came from the deployed API reading DynamoDB, and the clock is Jirani's demo clock.
+    const toolResult = JSON.stringify(model.calls[1]!.messages.at(-1));
+    expect(toolResult).toContain('No morning activity');
+    expect(model.calls[0]!.system).toContain('Monday, October 19, 2026');
+  });
 });
