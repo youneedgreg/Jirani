@@ -15,14 +15,19 @@ export const TOOLS: Record<Speaker, readonly string[]> = {
   family: ['tell_jirani', 'answer_checkin', 'how_is_she', 'why_alert', 'weekly_report', 'view_front_door', 'usual_routine'],
 };
 
-/** Amazon Bedrock ID for Claude Sonnet 5.5. Override with BEDROCK_MODEL_ID (e.g. an inference profile ID). */
-export const DEFAULT_BEDROCK_MODEL_ID = 'anthropic.claude-sonnet-5-5';
+/**
+ * Claude Sonnet 5.5 through Bedrock's EU inference profile: in eu-north-1 the model is only
+ * offered through an inference profile, and the EU one keeps requests in EU Regions.
+ * Override with BEDROCK_MODEL_ID.
+ */
+export const DEFAULT_BEDROCK_MODEL_ID = 'eu.anthropic.claude-sonnet-5-5';
+export const DEFAULT_BEDROCK_REGION = 'eu-north-1';
 
 export function bedrockModel(opts: { modelId?: string; region?: string } = {}): BedrockModel {
   // No temperature/topP: Claude Sonnet 5.5 rejects non-default sampling settings.
   return new BedrockModel({
     modelId: opts.modelId ?? DEFAULT_BEDROCK_MODEL_ID,
-    region: opts.region ?? 'us-east-1',
+    region: opts.region ?? DEFAULT_BEDROCK_REGION,
     maxTokens: 16_000,
   });
 }

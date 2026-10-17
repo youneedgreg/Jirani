@@ -5,7 +5,7 @@ import { fromLocal } from '@jirani/core';
 import { demoHousehold, MemoryStore } from '@jirani/mcp';
 import { createApp } from '@jirani/mcp/app';
 import { generate, PRESETS, replay } from 'ring-routine-sim';
-import { ask, fetchClock, systemPrompt, TOOLS } from '../src/index.ts';
+import { ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, systemPrompt, TOOLS } from '../src/index.ts';
 import { lastToolResults, ScriptedModel } from '../src/testing.ts';
 
 /**
@@ -98,5 +98,15 @@ describe('Jirani agent (Strands + MCP)', () => {
     ).rejects.toThrow();
     expect(model.calls).toHaveLength(0);
     refusing.close();
+  });
+
+  it('defaults to Claude Sonnet 5.5 through the EU inference profile in eu-north-1', () => {
+    expect(DEFAULT_BEDROCK_MODEL_ID).toBe('eu.anthropic.claude-sonnet-5-5');
+    expect(DEFAULT_BEDROCK_REGION).toBe('eu-north-1');
+    const config = bedrockModel().getConfig();
+    expect(config.modelId).toBe('eu.anthropic.claude-sonnet-5-5');
+    // Claude Sonnet 5.5 rejects non-default sampling settings, so none are sent.
+    expect(config.temperature).toBeUndefined();
+    expect(config.topP).toBeUndefined();
   });
 });
