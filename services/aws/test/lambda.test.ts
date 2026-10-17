@@ -140,6 +140,11 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
 
     const why = await call('why_alert');
     expect(why.text).toContain('No morning activity');
+    // The ladder in order, with names, times and how each person was reached.
+    expect(why.text).toMatch(
+      /At 10:05am Jirani asked Margaret by voice and on her TV.*At 10:26am Jirani messaged Joe \(her neighbour\)\..*so at 10:47am Jirani messaged Amina \(family\) and offered family a look at the front-door camera/,
+    );
+    expect(why.text).toContain('Still open: nobody has confirmed Margaret is OK yet.');
 
     await setClock(local('2026-10-19', '10:52'));
     const ok = await call('answer_checkin', { from: 'contact', contact_id: 'joe', outcome: 'ok', note: "She's in the garden" });
