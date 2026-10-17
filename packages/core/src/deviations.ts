@@ -149,7 +149,8 @@ export function detect(input: DetectInput): DetectionResult {
       summary: `No morning activity yet. ${h.residentName} is usually up by ${hhmm(fa.median)}.`,
       evidence: {
         expected: `First activity around ${hhmm(fa.median)} (90% of days by ${hhmm(fa.p90)})${shift ? `, shifted ${shift} min by context` : ''}`,
-        observed: `Nothing since 5:00am today; ${lastOpenWords}.`,
+        // Not "nothing since 5am": that reads as if something happened at 5am.
+        observed: `No activity yet this morning; ${lastOpenWords}.`,
         eventIds: lastOpen ? [lastOpen.id] : [],
       },
     };
