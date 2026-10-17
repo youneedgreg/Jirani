@@ -8,7 +8,7 @@ the same code that runs locally (`pnpm demo`); only the storage and the trigger 
 Ring (or ring-routine-sim) ──HMAC-signed POST──▶ WebhookFn (Function URL) ──▶ DynamoDB
 Alexa+-style MCP client / dashboard ──Bearer──▶ ApiFn (Function URL: /mcp, /api/*) ◀──▶ DynamoDB
 EventBridge Scheduler (every minute) ──────────▶ EvaluateFn (rhythm engine + ladder) ◀──▶ DynamoDB
-Voice client / dashboard ──Bearer──▶ AgentFn (/ask) ──Converse──▶ Amazon Bedrock (Claude Sonnet 5.5)
+Voice client / dashboard ──Bearer──▶ AgentFn (/ask) ──Converse──▶ Amazon Bedrock (Amazon Nova 2 Lite)
                                          └──MCP over HTTP (Bearer)──▶ ApiFn /mcp
 ```
 
@@ -75,7 +75,7 @@ Options (append them directly, e.g. `pnpm aws:deploy -c demo=true`; with `--` in
 | `-c evaluateEveryMinutes=0` | Removes the schedule (nothing recurring left) |
 | `-c budgetEmail=you@example.com` | $10/month AWS Budgets alert at 80% and 100% |
 | `-c senderEmail=... -c contactEmails=... -c dashboardUrl=...` | Email escalation messages and the weekly report through SES (see Email below) |
-| `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `eu.anthropic.claude-sonnet-5-5`) |
+| `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `eu.amazon.nova-2-lite-v1:0`) |
 | `-c region=<region>` | Deploy to another Region (default `eu-north-1`; a new-experience AWS project can only use its own Region) |
 
 The deploy prints `WebhookUrl`, `McpUrl`, `ApiUrl`, `AskUrl` and the two secret names. Read the secrets with:
@@ -100,18 +100,26 @@ curl -X POST <AskUrl> -H "Authorization: Bearer <api token>" -H "Content-Type: a
 
 ### The agent and Bedrock
 
-The agent calls Claude Sonnet 5.5 through Bedrock's EU inference profile,
-`eu.anthropic.claude-sonnet-5-5`, from eu-north-1. In that Region the model is only offered
-through an inference profile (the plain `anthropic.claude-sonnet-5-5` ID can't be called
-on demand there), and the EU profile keeps requests inside EU Regions.
+The agent calls Amazon Nova 2 Lite through Bedrock's EU inference profile,
+`eu.amazon.nova-2-lite-v1:0`, from eu-north-1. In that Region the model is only offered
+through an inference profile (the plain `amazon.nova-2-lite-v1:0` ID can't be called
+on demand there), and the EU profile keeps requests inside EU Regions (Stockholm, Frankfurt,
+Ireland, Paris, Milan, Spain). Don't use the `global.` profile: it can route outside the EU.
 
-Once per AWS account, before the first `/ask` works, someone with access to the account must,
-in the Bedrock console (eu-north-1): submit Anthropic's use-case form, and accept the AWS
-Marketplace agreement for the model (pay per use). Until then Bedrock answers
-`AccessDeniedException: ... is not available for this account`, and
-`aws bedrock get-foundation-model-availability --model-id anthropic.claude-sonnet-5-5`
-shows `agreementAvailability: NOT_AVAILABLE`. The agent sends no `temperature` or `topP`:
-Claude Sonnet 5.5 rejects non-default sampling settings.
+Nova is an Amazon model, so there's no use-case form or Marketplace agreement to accept: it
+worked on a new free-plan project with no extra step. Nova calls Jirani's MCP tools through
+the Converse API's client-side tool use, which Strands handles. The agent sends
+`temperature: 0`, as in AWS's Nova tool-use examples. With Nova's default sampling, alert
+explanations sometimes dropped a step or a time; at 0, three runs of "Why did you alert me?"
+each kept every step in order with its time (the wording still varies a little). Price in
+eu-north-1 (AWS Price List API, checked 17 Oct 2026): $0.363 per million input tokens and
+$2.992 per million output tokens. Measured on 17 Oct: three test questions (one tool call
+each) took 6 model calls, 11,089 input and 253 output tokens, about $0.005 in all, so under
+a fifth of a cent per `/ask`.
+
+To try another model, deploy with `-c bedrockModelId=<id>` (or set `BEDROCK_MODEL_ID` for
+`pnpm ask`), e.g. `eu.amazon.nova-pro-v1:0` for a larger model. The AgentFn role already
+allows any foundation model or inference profile.
 
 What the agent may do depends on who is speaking (`"as"`):
 

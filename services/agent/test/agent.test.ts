@@ -85,6 +85,8 @@ describe('Jirani agent (Strands + MCP)', () => {
     expect(p).toMatch(/Only state facts that a tool returned/);
     expect(p).toMatch(/Never diagnose/);
     expect(p).toMatch(/never contacts emergency services/);
+    expect(p).toMatch(/keep every step why_alert lists, in its order/);
+    expect(p).toMatch(/up to four when you explain an alert/);
   });
 
   it('fails loudly when the MCP server refuses it, instead of answering without tools', async () => {
@@ -100,13 +102,13 @@ describe('Jirani agent (Strands + MCP)', () => {
     refusing.close();
   });
 
-  it('defaults to Claude Sonnet 5.5 through the EU inference profile in eu-north-1', () => {
-    expect(DEFAULT_BEDROCK_MODEL_ID).toBe('eu.anthropic.claude-sonnet-5-5');
+  it('defaults to Amazon Nova 2 Lite through the EU inference profile in eu-north-1', () => {
+    expect(DEFAULT_BEDROCK_MODEL_ID).toBe('eu.amazon.nova-2-lite-v1:0');
     expect(DEFAULT_BEDROCK_REGION).toBe('eu-north-1');
     const config = bedrockModel().getConfig();
-    expect(config.modelId).toBe('eu.anthropic.claude-sonnet-5-5');
-    // Claude Sonnet 5.5 rejects non-default sampling settings, so none are sent.
-    expect(config.temperature).toBeUndefined();
+    expect(config.modelId).toBe('eu.amazon.nova-2-lite-v1:0');
+    // temperature 0 keeps Nova's answers close to the tool facts.
+    expect(config.temperature).toBe(0);
     expect(config.topP).toBeUndefined();
   });
 });

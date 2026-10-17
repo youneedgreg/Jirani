@@ -196,9 +196,43 @@ export function buildMcpServer(store: Store): McpServer {
       const deviation =
         ev.deviations.find((d) => d.id === e.deviationId) ??
         ev.suppressed.find((x) => x.deviation.id === e.deviationId)?.deviation;
-      const steps = e.history.map(
-        (st) => `${localTime(st.at)}: level ${st.level}${st.note ? ` (${st.note})` : ''}: ${st.actions.map((a) => `${a.type}${a.to ? ` to ${a.to}` : ''}`).join(', ') || 'no action'}`,
-      );
+      // Plain, ordered sentences with names and times, so whoever relays this (voice or the
+      // agent) can't reorder the ladder or guess how someone was reached.
+      const name = h().residentName;
+      const who = (to?: string) => {
+        if (to === 'resident') return name;
+        if (to === 'family' || !to) return 'family';
+        const c = h().contacts.find((x) => x.id === to);
+        return c ? `${c.name} (${c.relation === 'neighbour' ? 'her neighbour' : 'family'})` : to;
+      };
+      const did = (a: Escalation['history'][number]['actions'][number]) => {
+        switch (a.type) {
+          case 'checkin_resident':
+            return `asked ${name} by voice and on her TV whether she was alright`;
+          case 'notify_contact':
+            return `messaged ${who(a.to)}`;
+          case 'offer_live_view':
+            return `offered ${who(a.to)} a look at the front-door camera, which ${name} had agreed to`;
+          case 'suggest_emergency':
+            return `told ${who(a.to)} to call 911 if they think she needs help (Jirani never calls for you)`;
+          case 'all_clear':
+            return `told ${who(a.to)} that ${name} is OK`;
+          case 'log':
+            return 'noted it without contacting anyone';
+        }
+      };
+      const today = toLocal(h().timeZone, store.now()).date;
+      const when = (iso: string) => {
+        const l = toLocal(h().timeZone, iso);
+        return l.date === today ? hhmm(l.minutes) : `${hhmm(l.minutes)} on ${l.date}`;
+      };
+      const steps = [...e.history]
+        .sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+        .map((st) => {
+          const actions = st.actions.map(did);
+          const list = actions.length > 1 ? `${actions.slice(0, -1).join(', ')} and ${actions.at(-1)}` : (actions[0] ?? 'did nothing yet');
+          return `${st.note ? `${st.note.replace(/\.$/, '')}, so at` : 'At'} ${when(st.at)} Jirani ${list}.`;
+        });
       const contexts = store.state().contexts.filter((c) => Date.parse(c.endsAt) >= Date.parse(e.openedAt) - 86_400_000);
       const text = [
         `${e.summary}`,
@@ -206,8 +240,10 @@ export function buildMcpServer(store: Store): McpServer {
           ? `Expected: ${deviation.evidence.expected.replace(/\.$/, '')}. Observed: ${deviation.evidence.observed.replace(/\.$/, '')}.`
           : '',
         contexts.length ? `Plans I checked: ${contexts.map((c) => `"${c.text}"`).join(', ')}. None covered this time.` : 'No plans on file covered this time.',
-        `Steps: ${steps.join(' | ')}.`,
-        e.resolution ? `Resolved by ${e.resolution.by}: ${e.resolution.note}.` : `Still open at level ${e.level}.`,
+        `What Jirani did, in order: ${steps.join(' ')}`,
+        e.resolution
+          ? `Resolved at ${when(e.resolution.at)}: ${e.resolution.by} said "${e.resolution.note}".`
+          : `Still open: nobody has confirmed ${name} is OK yet.`,
       ]
         .filter(Boolean)
         .join(' ');
