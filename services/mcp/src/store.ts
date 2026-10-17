@@ -23,6 +23,8 @@ export interface Store {
   remember(requestId: string): boolean;
   addEvent(e: CoreEvent): void;
   addContext(c: ContextNote): void;
+  /** Delete a plan note (a correction or a cancellation). False if there is no such note. */
+  removeContext(id: string): boolean;
   setPause(p: Pause | undefined): void;
   setEscalations(es: Escalation[], evaluatedAt: string): void;
   deliver(m: OutboxMessage): void;
@@ -83,6 +85,14 @@ export class MemoryStore implements Store {
   addContext(c: ContextNote): void {
     this.contexts.push(c);
     this.persist();
+  }
+
+  removeContext(id: string): boolean {
+    const before = this.contexts.length;
+    this.contexts = this.contexts.filter((c) => c.id !== id);
+    if (this.contexts.length === before) return false;
+    this.persist();
+    return true;
   }
 
   setPause(p: Pause | undefined): void {

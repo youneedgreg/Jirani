@@ -224,6 +224,12 @@ export class DynamoStore implements Store {
     this.contexts = [...this.contexts, c];
   }
 
+  removeContext(id: string): boolean {
+    if (!this.contexts.some((c) => c.id === id)) return false;
+    this.contexts = this.contexts.filter((c) => c.id !== id);
+    return true;
+  }
+
   setPause(p: Pause | undefined): void {
     this.pause = p;
   }
@@ -268,6 +274,10 @@ export class DynamoStore implements Store {
     this.newMessages.forEach((m, i) => writes.push(put({ SK: `OUT#${m.at}#${String(i).padStart(4, '0')}#${randomUUID()}`, data: m })));
     for (const c of this.contexts) {
       if (!this.loadedContextIds.has(c.id)) writes.push(put({ SK: `CTX#${c.id}`, data: c }));
+    }
+    const kept = new Set(this.contexts.map((c) => c.id));
+    for (const id of this.loadedContextIds) {
+      if (!kept.has(id)) writes.push({ Delete: { TableName, Key: { PK, SK: `CTX#${id}` } } });
     }
     for (const e of this.newEvents) writes.push(put({ SK: eventSk(e), data: e }));
 

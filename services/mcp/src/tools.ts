@@ -6,6 +6,7 @@ import {
   hhmm,
   reportSummary,
   respond,
+  spokenDateTime,
   summariseDay,
   toLocal,
   weeklyReport,
@@ -37,11 +38,6 @@ export function buildMcpServer(store: Store): McpServer {
     },
   );
   const h = () => store.household();
-  const localTime = (iso: string) => {
-    const l = toLocal(h().timeZone, iso);
-    return `${l.date} ${hhmm(l.minutes)}`;
-  };
-
   /** Accept ISO instants, or "YYYY-MM-DD HH:MM" in the household's local time. */
   const parseWhen = (v: string): string => {
     const m = v.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})$/);
@@ -88,7 +84,50 @@ export function buildMcpServer(store: Store): McpServer {
         visitor_expected: 'I won\'t flag the door for that visit.',
         note: 'I\'ve noted it for the family.',
       };
-      return speak(`Got it: "${text}", ${localTime(startsAt)} to ${localTime(endsAt)}. ${effect[kind]}`, { context: note });
+      // Weekday names, so a wrong day ("Friday" for "this weekend") is obvious when read back.
+      const tz = h().timeZone;
+      return speak(`Got it: "${text}", from ${spokenDateTime(tz, startsAt)} to ${spokenDateTime(tz, endsAt)}. ${effect[kind]}`, {
+        context: note,
+      });
+    },
+  );
+
+  // Plans can be wrong ("this weekend" saved as Friday). These let the resident or
+  // family see what's on file and take a wrong one back out.
+  const planWords = (c: ContextNote) =>
+    `"${c.text}" (${c.kind}), from ${spokenDateTime(h().timeZone, c.startsAt)} to ${spokenDateTime(h().timeZone, c.endsAt)}`;
+
+  server.registerTool(
+    'list_plans',
+    {
+      title: 'List plans on file',
+      description: 'Current and upcoming plans Jirani knows about (away, late start, visitor), with their ids for cancel_plan.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const now = Date.parse(store.now());
+      const plans = store
+        .state()
+        .contexts.filter((c) => Date.parse(c.endsAt) >= now)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+      if (plans.length === 0) return speak('There are no current or upcoming plans on file.', { plans: [] });
+      return speak(`Plans on file: ${plans.map((c) => `[${c.id}] ${planWords(c)}`).join('; ')}.`, { plans });
+    },
+  );
+
+  server.registerTool(
+    'cancel_plan',
+    {
+      title: 'Cancel a plan',
+      description: 'Remove a plan that was saved wrongly or is no longer happening. Get the id from list_plans.',
+      inputSchema: { id: z.string().describe('The plan id from list_plans') },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ id }) => {
+      const plan = store.state().contexts.find((c) => c.id === id);
+      if (!plan || !store.removeContext(id)) throw new Error(`No plan with id "${id}". Use list_plans to see the ids.`);
+      return speak(`Cancelled ${planWords(plan)}.`, { cancelled: plan });
     },
   );
 
@@ -216,7 +255,8 @@ export function buildMcpServer(store: Store): McpServer {
           case 'suggest_emergency':
             return `told ${who(a.to)} to call 911 if they think she needs help (Jirani never calls for you)`;
           case 'all_clear':
-            return `told ${who(a.to)} that ${name} is OK`;
+            // Neutral on purpose: an alert can close on sensor activity, which isn't someone confirming she's OK.
+            return `let ${who(a.to)} know the alert was closed`;
           case 'log':
             return 'noted it without contacting anyone';
         }
@@ -229,6 +269,12 @@ export function buildMcpServer(store: Store): McpServer {
       const steps = [...e.history]
         .sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
         .map((st) => {
+          const seen = st.note?.match(/^Activity recorded: (.+)$/)?.[1];
+          if (seen) {
+            // Closed by sensors, not by a person: say so plainly so nobody retells it as "Joe confirmed".
+            const told = st.actions.map((a) => who(a.to));
+            return `Sensors then recorded activity (${seen}), so at ${when(st.at)} Jirani closed the alert${told.length ? ` and let ${told.join(' and ')} know` : ''}.`;
+          }
           const actions = st.actions.map(did);
           const list = actions.length > 1 ? `${actions.slice(0, -1).join(', ')} and ${actions.at(-1)}` : (actions[0] ?? 'did nothing yet');
           return `${st.note ? `${st.note.replace(/\.$/, '')}, so at` : 'At'} ${when(st.at)} Jirani ${list}.`;
@@ -242,7 +288,9 @@ export function buildMcpServer(store: Store): McpServer {
         contexts.length ? `Plans I checked: ${contexts.map((c) => `"${c.text}"`).join(', ')}. None covered this time.` : 'No plans on file covered this time.',
         `What Jirani did, in order: ${steps.join(' ')}`,
         e.resolution
-          ? `Resolved at ${when(e.resolution.at)}: ${e.resolution.by} said "${e.resolution.note}".`
+          ? e.resolution.by === 'Jirani'
+            ? `Closed at ${when(e.resolution.at)} because sensors recorded activity. Nobody has confirmed in person that ${name} is OK.`
+            : `Resolved at ${when(e.resolution.at)}: ${e.resolution.by} said "${e.resolution.note}".`
           : `Still open: nobody has confirmed ${name} is OK yet.`,
       ]
         .filter(Boolean)

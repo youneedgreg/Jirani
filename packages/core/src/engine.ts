@@ -1,6 +1,7 @@
-import { buildBaseline, type Baseline } from './baseline.ts';
-import { detect, type DetectionResult } from './deviations.ts';
-import { DEFAULT_LADDER, openEscalation, tick, type Action, type Escalation, type LadderConfig } from './escalation.ts';
+import { buildBaseline, roleOf, type Baseline } from './baseline.ts';
+import { clearingActivity, detect, ROLE_WORDS, type DetectionResult } from './deviations.ts';
+import { closeOnActivity, DEFAULT_LADDER, openEscalation, tick, type Action, type Escalation, type LadderConfig } from './escalation.ts';
+import { hhmm, toLocal } from './time.ts';
 import type { ContextNote, CoreEvent, Household, Pause } from './types.ts';
 
 export interface JiraniState {
@@ -49,6 +50,16 @@ export function evaluate(state: JiraniState, now: string, cfg: LadderConfig = DE
         : e,
     );
   } else {
+    // Close absence alerts that recorded activity now answers (late-arriving events).
+    escalations = escalations.map((e) => {
+      if (e.status !== 'open') return e;
+      const seen = clearingActivity(h, state.events, e.deviationId, now);
+      if (!seen) return e;
+      const words = `the ${ROLE_WORDS[roleOf(h, seen)!]} at ${hhmm(toLocal(h.timeZone, seen.at).minutes)}`;
+      const next = closeOnActivity(e, h, words, now);
+      for (const a of next.history.at(-1)!.actions) actions.push({ escalationId: next.id, action: a });
+      return next;
+    });
     for (const d of detection.deviations) {
       if (known.has(d.id)) continue;
       const e = openEscalation(d, h, now);

@@ -54,7 +54,7 @@ export interface DetectInput {
 const MIN_BASELINE_DAYS = 7;
 const RARE_HOUR_PROBABILITY = 0.04;
 
-const ROLE_WORDS: Record<Role, string> = {
+export const ROLE_WORDS: Record<Role, string> = {
   frontDoor: 'front door',
   fridge: 'fridge',
   bathroom: 'bathroom door',
@@ -80,6 +80,33 @@ export function offlineDevices(events: CoreEvent[], now: string): Map<string, st
   const off = new Map<string, string>();
   for (const [id, e] of last) if (e.type === 'device_offline') off.set(id, e.at);
   return off;
+}
+
+/**
+ * For an absence alert (no morning activity, or no activity for hours): the recorded
+ * activity that answers it, if there is any now. Ring events can arrive late (webhook
+ * retries, a replay), so this goes by when things happened, not when they arrived,
+ * using the same "she's up" rule as detect().
+ */
+export function clearingActivity(h: Household, events: CoreEvent[], deviationId: string, now: string): CoreEvent | undefined {
+  const nowMs = Date.parse(now);
+  const opens = events
+    .filter((e) => e.type === 'contact_sensor_opened' && roleOf(h, e) && roleOf(h, e) !== 'doorbell' && Date.parse(e.at) <= nowMs)
+    .sort((x, y) => x.at.localeCompare(y.at));
+  const [kind, date, ...rest] = deviationId.split(':');
+  if (kind === 'no_morning_activity') {
+    const after5 = opens.filter((e) => {
+      const l = toLocal(h.timeZone, e.at);
+      return l.date === date && l.minutes >= 300;
+    });
+    const up = after5.some((e) => roleOf(h, e) !== 'bathroom') || after5.length >= 2;
+    return up ? after5[0] : undefined;
+  }
+  if (kind === 'long_inactivity') {
+    const last = events.find((e) => e.id === rest.join(':'));
+    return last ? opens.find((e) => e.at > last.at) : undefined;
+  }
+  return undefined;
 }
 
 export function detect(input: DetectInput): DetectionResult {
@@ -149,7 +176,8 @@ export function detect(input: DetectInput): DetectionResult {
       summary: `No morning activity yet. ${h.residentName} is usually up by ${hhmm(fa.median)}.`,
       evidence: {
         expected: `First activity around ${hhmm(fa.median)} (90% of days by ${hhmm(fa.p90)})${shift ? `, shifted ${shift} min by context` : ''}`,
-        observed: `Nothing since 5:00am today; ${lastOpenWords}.`,
+        // Not "nothing since 5am": that reads as if something happened at 5am.
+        observed: `No activity yet this morning; ${lastOpenWords}.`,
         eventIds: lastOpen ? [lastOpen.id] : [],
       },
     };

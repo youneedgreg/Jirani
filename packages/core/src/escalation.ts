@@ -139,6 +139,27 @@ export function tick(e: Escalation, h: Household, now: string, cfg: LadderConfig
   return e;
 }
 
+/**
+ * Activity turned up after an absence alert opened (often events that arrived late):
+ * close it, and tell whoever was already asked so nobody goes knocking for nothing.
+ */
+export function closeOnActivity(e: Escalation, h: Household, seen: string, now: string): Escalation {
+  if (e.status !== 'open') return e;
+  const informed = new Set(e.history.flatMap((s) => s.actions.filter((a) => a.type === 'notify_contact').map((a) => a.to!)));
+  const allClear: Action[] = [...informed].map((id) => ({
+    type: 'all_clear',
+    to: id,
+    message: `Update from Jirani: activity has now been recorded at ${h.residentName}'s home (${seen}), so this alert is closed.`,
+  }));
+  const note = `Activity recorded: ${seen}`;
+  return {
+    ...e,
+    status: 'resolved',
+    history: [...e.history, { at: now, level: e.level, actions: allClear, note }],
+    resolution: { at: now, by: 'Jirani', note },
+  };
+}
+
 export interface Response {
   from: 'resident' | 'contact';
   contactId?: string;

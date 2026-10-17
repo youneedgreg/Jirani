@@ -74,6 +74,13 @@ describe.skipIf(!endpoint)('DynamoStore (DynamoDB Local)', () => {
     const cleared = await DynamoStore.load(db, table, h);
     expect(cleared.state().pause).toBeUndefined();
     expect(cleared.now()).not.toBe('2026-10-19T15:00:00.000Z');
+
+    // A cancelled plan is deleted, not just hidden.
+    expect(cleared.removeContext('nope')).toBe(false);
+    expect(cleared.removeContext('ctx-1')).toBe(true);
+    expect(cleared.pendingWrites()).toEqual([{ Delete: { TableName: table, Key: { PK: expect.any(String), SK: 'CTX#ctx-1' } } }]);
+    await cleared.flush();
+    expect((await DynamoStore.load(db, table, h)).state().contexts).toEqual([]);
   });
 
   it('keeps messages sent at the same instant in the order they were sent', async () => {
