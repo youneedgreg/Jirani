@@ -63,7 +63,7 @@ Prerequisites: an AWS account, AWS CLI credentials (`aws configure` or SSO), Nod
 pnpm install
 pnpm aws:synth                                   # optional: build and check the template locally
 pnpm --filter @jirani/infra exec cdk bootstrap   # once per account/region
-pnpm aws:deploy                                  # us-east-1 by default (where you enabled Bedrock)
+pnpm aws:deploy                                  # eu-north-1 by default (-c region=... to change)
 ```
 
 Options (append them directly, e.g. `pnpm aws:deploy -c demo=true`; with `--` in between, pnpm drops them):
@@ -75,7 +75,8 @@ Options (append them directly, e.g. `pnpm aws:deploy -c demo=true`; with `--` in
 | `-c evaluateEveryMinutes=0` | Removes the schedule (nothing recurring left) |
 | `-c budgetEmail=you@example.com` | $10/month AWS Budgets alert at 80% and 100% |
 | `-c senderEmail=... -c contactEmails=... -c dashboardUrl=...` | Email escalation messages and the weekly report through SES (see Email below) |
-| `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `anthropic.claude-sonnet-5-5`) |
+| `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `eu.anthropic.claude-sonnet-5-5`) |
+| `-c region=<region>` | Deploy to another Region (default `eu-north-1`; a new-experience AWS project can only use its own Region) |
 
 The deploy prints `WebhookUrl`, `McpUrl`, `ApiUrl`, `AskUrl` and the two secret names. Read the secrets with:
 
@@ -99,13 +100,18 @@ curl -X POST <AskUrl> -H "Authorization: Bearer <api token>" -H "Content-Type: a
 
 ### The agent and Bedrock
 
-Before the first `/ask`, open the Bedrock console in us-east-1 and make sure the account can
-use Claude Sonnet 5.5 (model access, and quotas above 0). The agent uses the Bedrock model ID
-`anthropic.claude-sonnet-5-5`. If Bedrock answers that on-demand throughput isn't supported for
-that ID, redeploy with the inference profile ID the console shows for the model:
-`pnpm aws:deploy -c bedrockModelId=<inference profile id>`. Neither has been tried against a real
-account yet. The agent sends no `temperature` or `topP`: Claude Sonnet 5.5 rejects non-default
-sampling settings.
+The agent calls Claude Sonnet 5.5 through Bedrock's EU inference profile,
+`eu.anthropic.claude-sonnet-5-5`, from eu-north-1. In that Region the model is only offered
+through an inference profile (the plain `anthropic.claude-sonnet-5-5` ID can't be called
+on demand there), and the EU profile keeps requests inside EU Regions.
+
+Once per AWS account, before the first `/ask` works, someone with access to the account must,
+in the Bedrock console (eu-north-1): submit Anthropic's use-case form, and accept the AWS
+Marketplace agreement for the model (pay per use). Until then Bedrock answers
+`AccessDeniedException: ... is not available for this account`, and
+`aws bedrock get-foundation-model-availability --model-id anthropic.claude-sonnet-5-5`
+shows `agreementAvailability: NOT_AVAILABLE`. The agent sends no `temperature` or `topP`:
+Claude Sonnet 5.5 rejects non-default sampling settings.
 
 What the agent may do depends on who is speaking (`"as"`):
 
