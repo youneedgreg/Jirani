@@ -63,7 +63,7 @@ Spec **2025-11-25**, **Streamable HTTP**, stateless (`POST /mcp`). Run it with `
 
 ## The agent (Amazon Bedrock)
 
-A [Strands](https://strandsagents.com) agent on Amazon Bedrock (Claude Sonnet 5.5) answers Margaret and Amina in a sentence or two. It can only reach Jirani through the MCP server above, and only with the tools allowed for whoever is speaking: Margaret's pause control isn't available to family, and the front-door camera isn't a tool on her side. It must cite what the tools returned, say "I don't know" otherwise, and never diagnose.
+A [Strands](https://strandsagents.com) agent on Amazon Bedrock (Amazon Nova 2 Lite) answers Margaret and Amina in a sentence or two. It can only reach Jirani through the MCP server above, and only with the tools allowed for whoever is speaking: Margaret's pause control isn't available to family, and the front-door camera isn't a tool on her side. It must cite what the tools returned, say "I don't know" otherwise, and never diagnose.
 
 ```bash
 pnpm ask "How's Mum this week?"                       # needs AWS credentials with Bedrock access

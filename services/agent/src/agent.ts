@@ -16,18 +16,21 @@ export const TOOLS: Record<Speaker, readonly string[]> = {
 };
 
 /**
- * Claude Sonnet 5.5 through Bedrock's EU inference profile: in eu-north-1 the model is only
+ * Amazon Nova 2 Lite through Bedrock's EU inference profile: in eu-north-1 the model is only
  * offered through an inference profile, and the EU one keeps requests in EU Regions.
  * Override with BEDROCK_MODEL_ID.
  */
-export const DEFAULT_BEDROCK_MODEL_ID = 'eu.anthropic.claude-sonnet-5-5';
+export const DEFAULT_BEDROCK_MODEL_ID = 'eu.amazon.nova-2-lite-v1:0';
 export const DEFAULT_BEDROCK_REGION = 'eu-north-1';
 
 export function bedrockModel(opts: { modelId?: string; region?: string } = {}): BedrockModel {
-  // No temperature/topP: Claude Sonnet 5.5 rejects non-default sampling settings.
+  // temperature 0 (as in AWS's Nova tool-use examples) keeps answers close to the tool facts:
+  // with Nova's default sampling, alert explanations sometimes dropped a step or a time.
+  // maxTokens is well under Nova 2 Lite's 64K output limit; answers are a few sentences.
   return new BedrockModel({
     modelId: opts.modelId ?? DEFAULT_BEDROCK_MODEL_ID,
     region: opts.region ?? DEFAULT_BEDROCK_REGION,
+    temperature: 0,
     maxTokens: 16_000,
   });
 }
@@ -68,6 +71,7 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
         'When she asks you to pause, use pause_monitoring and tell her that family will only see that monitoring is paused, not why.'
       : `You are speaking with ${o.residentName}'s family, by voice or on the dashboard. ` +
         'Use how_is_she for today, weekly_report for the week, why_alert to explain an alert, and view_front_door only when they ask to see the front door. ' +
+        'When you explain an alert, keep every step why_alert lists, in its order, with its time and the way the person was reached. ' +
         'If they report that they checked on her, use answer_checkin with from="contact" and their contact id.';
   return [
     `You are Jirani, a caregiving assistant for ${o.residentName}, an older adult who lives alone. Jirani learns her daily rhythm from Ring door and contact sensors; it never watches video unless she agreed to it.`,
@@ -76,7 +80,7 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
     'Only state facts that a tool returned in this conversation, and give the event times the tools report. If the tools do not answer the question, say you don\'t know rather than guessing.',
     'Never diagnose or suggest a medical cause. If a change is worth raising, say it is worth mentioning to her doctor.',
     'Jirani never contacts emergency services itself; a person decides. Never claim that you called anyone.',
-    'Answer in one to three short sentences that sound natural when spoken aloud. No lists, no markdown.',
+    'Answer in one to three short sentences that sound natural when spoken aloud (up to four when you explain an alert). No lists, no markdown.',
   ].join('\n\n');
 }
 
