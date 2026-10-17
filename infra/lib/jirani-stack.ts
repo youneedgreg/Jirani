@@ -1,7 +1,6 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CfnOutput, Duration, RemovalPolicy, Stack, TimeZone, type StackProps } from 'aws-cdk-lib';
-import * as budgets from 'aws-cdk-lib/aws-budgets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -22,8 +21,6 @@ export interface JiraniStackProps extends StackProps {
   demo?: boolean;
   /** How often the rhythm engine runs. 0 disables the schedule. */
   evaluateEveryMinutes?: number;
-  /** If set, an AWS Budgets alert emails this address at 80% and 100% of $10/month. */
-  budgetEmail?: string;
   /** Bedrock model or inference profile ID for the agent. Defaults to the agent's built-in choice. */
   bedrockModelId?: string;
   /**
@@ -211,15 +208,9 @@ export class JiraniStack extends Stack {
       });
     }
 
-    if (props.budgetEmail) {
-      new budgets.CfnBudget(this, 'Budget', {
-        budget: { budgetType: 'COST', timeUnit: 'MONTHLY', budgetLimit: { amount: 10, unit: 'USD' } },
-        notificationsWithSubscribers: [80, 100].map((threshold) => ({
-          notification: { notificationType: 'ACTUAL', comparisonOperator: 'GREATER_THAN', threshold, thresholdType: 'PERCENTAGE' },
-          subscribers: [{ subscriptionType: 'EMAIL', address: props.budgetEmail! }],
-        })),
-      });
-    }
+    // No AWS Budgets alert here: AWS::Budgets::Budget isn't a CloudFormation resource in
+    // eu-north-1, so including one fails the whole deploy. Set the budget up in the
+    // Billing console instead (docs/aws.md, Cost).
 
     new CfnOutput(this, 'WebhookUrl', { value: `${webhookUrl.url}ring/webhook`, description: 'Point Ring (or ring-routine-sim replay) here' });
     new CfnOutput(this, 'McpUrl', { value: `${apiUrl.url}mcp`, description: 'MCP server, Streamable HTTP' });

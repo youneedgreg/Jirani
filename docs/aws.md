@@ -24,7 +24,7 @@ Voice client / dashboard ──Bearer──▶ AgentFn (/ask) ──Converse─�
 | Email | DynamoDB Stream on new outbox items → NotifyFn → Amazon SES; WeeklyFn on an EventBridge Scheduler cron (optional, `-c senderEmail`) | `services/aws/src/notify.ts`, `services/aws/src/lambda/notify.ts`, `weekly.ts` |
 | Secrets | Secrets Manager: Ring HMAC key + API token, generated at deploy; functions get only the ARNs | `services/aws/src/config.ts` |
 | Logs | CloudWatch log group per function, 1-week retention | `infra/lib/jirani-stack.ts` |
-| Cost guard | Optional AWS Budgets alert at $10/month (`-c budgetEmail=...`) | `infra/lib/jirani-stack.ts` |
+| Cost guard | AWS Budgets alert, set up in the Billing console (CloudFormation can't create one in eu-north-1; see Cost) | — |
 
 All functions: Node.js 22, arm64, ESM bundles built by esbuild during `cdk synth`. Only the
 agent's role may call Bedrock (`bedrock:InvokeModel*` on foundation models and inference profiles).
@@ -73,7 +73,6 @@ Options (append them directly, e.g. `pnpm aws:deploy -c demo=true`; with `--` in
 | `-c demo=true` | Enables `POST /demo/clock` so the video can fast-forward time against the real stack |
 | `-c corsOrigins=https://jirani.app,http://localhost:3000` | Browser origins for the dashboard and voice client |
 | `-c evaluateEveryMinutes=0` | Removes the schedule (nothing recurring left) |
-| `-c budgetEmail=you@example.com` | $10/month AWS Budgets alert at 80% and 100% |
 | `-c senderEmail=... -c contactEmails=... -c dashboardUrl=...` | Email escalation messages and the weekly report through SES (see Email below) |
 | `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `eu.amazon.nova-2-lite-v1:0`) |
 | `-c region=<region>` | Deploy to another Region (default `eu-north-1`; a new-experience AWS project can only use its own Region) |
@@ -181,6 +180,11 @@ should be cents a month at demo scale. The two Secrets Manager secrets are the m
 cost, about $0.40 each per month, prorated. Replace these estimates with the real numbers
 from Cost Explorer after a few days. To stop all recurring work without destroying data:
 `pnpm aws:deploy -c evaluateEveryMinutes=0`.
+
+For a spending alert, create a budget in the AWS Billing console (Budgets → Create budget →
+monthly cost budget, e.g. $10, with an email alert). The stack can't create one itself:
+`AWS::Budgets::Budget` isn't a CloudFormation resource in eu-north-1, and including it fails
+the whole deploy. Budgets is a global service, so the console budget still covers the stack.
 
 ## Testing without AWS
 

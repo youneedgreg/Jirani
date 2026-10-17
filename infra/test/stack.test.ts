@@ -77,11 +77,8 @@ describe('JiraniStack', () => {
     expect(ses).toHaveLength(2);
   });
 
-  it('adds a $10 budget alert only when an email is given', () => {
+  it('creates no AWS Budgets resource (not available in eu-north-1 CloudFormation)', () => {
     t.resourceCountIs('AWS::Budgets::Budget', 0);
-    synth({ budgetEmail: 'me@example.com' }).hasResourceProperties('AWS::Budgets::Budget', {
-      Budget: Match.objectLike({ BudgetLimit: { Amount: 10, Unit: 'USD' } }),
-    });
   });
 
   it('only allows the configured browser origins', () => {

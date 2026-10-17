@@ -6,7 +6,6 @@ import { JiraniStack } from '../lib/jirani-stack.ts';
  * cdk deploy -c demo=true                      also enable POST /demo/clock for the video
  * cdk deploy -c corsOrigins=https://jirani.app,http://localhost:3000
  * cdk deploy -c evaluateEveryMinutes=0         remove the schedule (no recurring compute)
- * cdk deploy -c budgetEmail=you@example.com    $10/month AWS Budgets alert
  * cdk deploy -c bedrockModelId=<id>            use another Bedrock model or inference profile for the agent
  * cdk deploy -c region=<region>                 deploy elsewhere (only if your AWS account allows that Region)
  * cdk deploy -c senderEmail=jirani@you.com -c contactEmails=joe=a@x.com,amina=b@x.com -c dashboardUrl=https://...
@@ -24,7 +23,6 @@ new JiraniStack(app, 'Jirani', {
   demo: ctx('demo') === 'true',
   ...(ctx('corsOrigins') ? { corsOrigins: ctx('corsOrigins')!.split(',').map((s) => s.trim()) } : {}),
   ...(ctx('evaluateEveryMinutes') !== undefined ? { evaluateEveryMinutes: Number(ctx('evaluateEveryMinutes')) } : {}),
-  ...(ctx('budgetEmail') ? { budgetEmail: ctx('budgetEmail')! } : {}),
   ...(ctx('bedrockModelId') ? { bedrockModelId: ctx('bedrockModelId')! } : {}),
   ...(ctx('senderEmail') ? { senderEmail: ctx('senderEmail')! } : {}),
   ...(ctx('contactEmails') ? { contactEmails: ctx('contactEmails')! } : {}),
