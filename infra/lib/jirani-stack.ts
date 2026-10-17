@@ -1,10 +1,11 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib';
+import { CfnOutput, Duration, RemovalPolicy, Stack, TimeZone, type StackProps } from 'aws-cdk-lib';
 import * as budgets from 'aws-cdk-lib/aws-budgets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as scheduler from 'aws-cdk-lib/aws-scheduler';
@@ -25,6 +26,15 @@ export interface JiraniStackProps extends StackProps {
   budgetEmail?: string;
   /** Bedrock model or inference profile ID for the agent. Defaults to the agent's built-in choice. */
   bedrockModelId?: string;
+  /**
+   * SES-verified address Jirani sends email from. Without it, messages stay in the
+   * outbox (shown on the dashboard) and nothing is emailed.
+   */
+  senderEmail?: string;
+  /** Contact emails, "joe=a@example.com,amina=b@example.com" (in the SES sandbox these must be verified too). */
+  contactEmails?: string;
+  /** Dashboard link included in emails. */
+  dashboardUrl?: string;
 }
 
 /**
@@ -42,6 +52,8 @@ export class JiraniStack extends Stack {
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billing: dynamodb.Billing.onDemand(),
       timeToLiveAttribute: 'ttl',
+      // Keys only: the notifier re-reads each new outbox item itself.
+      dynamoStream: dynamodb.StreamViewType.KEYS_ONLY,
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
@@ -157,6 +169,47 @@ export class JiraniStack extends Stack {
         maxAge: Duration.hours(1),
       },
     });
+
+    if (props.senderEmail) {
+      const emailEnv = {
+        SENDER_EMAIL: props.senderEmail,
+        ...(props.contactEmails ? { JIRANI_CONTACT_EMAILS: props.contactEmails } : {}),
+        ...(props.dashboardUrl ? { DASHBOARD_URL: props.dashboardUrl } : {}),
+      };
+      const sesSend = new iam.PolicyStatement({
+        actions: ['ses:SendEmail'],
+        resources: [`arn:aws:ses:${this.region}:${this.account}:identity/*`],
+      });
+
+      // Outbox -> email: each new OUT# item, once, retried on its own if SES fails.
+      const notify = fn('NotifyFn', 'notify.ts', { memorySize: 256, timeout: Duration.seconds(30), environment: emailEnv });
+      table.grantReadWriteData(notify);
+      notify.addToRolePolicy(sesSend);
+      notify.addEventSource(
+        new DynamoEventSource(table, {
+          startingPosition: lambda.StartingPosition.LATEST,
+          batchSize: 10,
+          retryAttempts: 5,
+          reportBatchItemFailures: true,
+          filters: [
+            lambda.FilterCriteria.filter({
+              eventName: lambda.FilterRule.isEqual('INSERT'),
+              dynamodb: { Keys: { SK: { S: lambda.FilterRule.beginsWith('OUT#') } } },
+            }),
+          ],
+        }),
+      );
+
+      // Weekly rhythm report to family, Sunday 6pm in the household's time zone.
+      const weekly = fn('WeeklyFn', 'weekly.ts', { memorySize: 512, timeout: Duration.seconds(60), environment: emailEnv });
+      table.grantReadData(weekly);
+      weekly.addToRolePolicy(sesSend);
+      new scheduler.Schedule(this, 'WeeklySchedule', {
+        description: 'Jirani: weekly rhythm report email',
+        schedule: scheduler.ScheduleExpression.cron({ minute: '0', hour: '18', weekDay: 'SUN', timeZone: TimeZone.AMERICA_NEW_YORK }),
+        target: new LambdaInvoke(weekly, { retryAttempts: 2 }),
+      });
+    }
 
     if (props.budgetEmail) {
       new budgets.CfnBudget(this, 'Budget', {

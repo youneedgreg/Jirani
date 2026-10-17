@@ -98,7 +98,7 @@ docs/                      aws.md, feedback.md, friction-log.md
 
 ## Status
 
-Built during the hackathon submission window. Working today: the core engine, Ring webhook verification, the Ring API client, the simulator, the MCP server, the end-to-end demo, the AWS stack in CDK (DynamoDB, four Lambda functions with Function URLs, EventBridge Scheduler, Secrets Manager), tested against DynamoDB Local, and the Strands agent, tested with a scripted stand-in model. In progress: the first real deployment and the first real Bedrock run, email via SES, the family dashboard and voice client, the Fire TV check-in card, and live Ring Developer Playground integration.
+Built during the hackathon submission window. Working today: the core engine, Ring webhook verification, the Ring API client, the simulator, the MCP server, the end-to-end demo, the AWS stack in CDK (DynamoDB, Lambda functions with Function URLs, EventBridge Scheduler, Secrets Manager), tested against DynamoDB Local, the Strands agent, tested with a scripted stand-in model, and email delivery through Amazon SES (escalation messages and a weekly report), tested with a fake sender. In progress: the first real deployment, Bedrock run and SES send, the family dashboard and voice client, the Fire TV check-in card, and live Ring Developer Playground integration.
 
 **Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in the Ring webhook v1.1 shape, signed exactly like Ring signs webhooks. Contact-sensor event names are an assumption until confirmed against Ring's docs.
 

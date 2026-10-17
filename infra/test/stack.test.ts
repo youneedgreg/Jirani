@@ -57,6 +57,26 @@ describe('JiraniStack', () => {
     synth({ evaluateEveryMinutes: 0 }).resourceCountIs('AWS::Scheduler::Schedule', 0);
   });
 
+  it('emails through SES only when a sender is configured', () => {
+    t.resourceCountIs('AWS::Lambda::EventSourceMapping', 0);
+    const withEmail = synth({ senderEmail: 'jirani@example.com', contactEmails: 'joe=j@example.com,amina=a@example.com' });
+    withEmail.resourceCountIs('AWS::Lambda::Function', 6);
+    withEmail.hasResourceProperties('AWS::Lambda::EventSourceMapping', {
+      StartingPosition: 'LATEST',
+      FunctionResponseTypes: ['ReportBatchItemFailures'],
+      FilterCriteria: { Filters: [{ Pattern: Match.stringLikeRegexp('OUT#') }] },
+    });
+    withEmail.hasResourceProperties('AWS::Scheduler::Schedule', {
+      ScheduleExpression: 'cron(0 18 ? * SUN *)',
+      ScheduleExpressionTimezone: 'America/New_York',
+    });
+    withEmail.hasResourceProperties('AWS::Lambda::Function', {
+      Environment: { Variables: Match.objectLike({ SENDER_EMAIL: 'jirani@example.com', JIRANI_CONTACT_EMAILS: Match.anyValue() }) },
+    });
+    const ses = Object.values(withEmail.findResources('AWS::IAM::Policy')).filter((p) => JSON.stringify(p).includes('ses:SendEmail'));
+    expect(ses).toHaveLength(2);
+  });
+
   it('adds a $10 budget alert only when an email is given', () => {
     t.resourceCountIs('AWS::Budgets::Budget', 0);
     synth({ budgetEmail: 'me@example.com' }).hasResourceProperties('AWS::Budgets::Budget', {

@@ -10,6 +10,8 @@ cdk.out/
 .env
 .env.*
 !.env.example
+# CDK context can hold contact email addresses
+infra/cdk.context.json
 
 # Generated simulator output
 data/*.json
