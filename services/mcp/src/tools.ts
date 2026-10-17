@@ -6,6 +6,7 @@ import {
   hhmm,
   reportSummary,
   respond,
+  spokenDateTime,
   summariseDay,
   toLocal,
   weeklyReport,
@@ -37,11 +38,6 @@ export function buildMcpServer(store: Store): McpServer {
     },
   );
   const h = () => store.household();
-  const localTime = (iso: string) => {
-    const l = toLocal(h().timeZone, iso);
-    return `${l.date} ${hhmm(l.minutes)}`;
-  };
-
   /** Accept ISO instants, or "YYYY-MM-DD HH:MM" in the household's local time. */
   const parseWhen = (v: string): string => {
     const m = v.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})$/);
@@ -88,7 +84,11 @@ export function buildMcpServer(store: Store): McpServer {
         visitor_expected: 'I won\'t flag the door for that visit.',
         note: 'I\'ve noted it for the family.',
       };
-      return speak(`Got it: "${text}", ${localTime(startsAt)} to ${localTime(endsAt)}. ${effect[kind]}`, { context: note });
+      // Weekday names, so a wrong day ("Friday" for "this weekend") is obvious when read back.
+      const tz = h().timeZone;
+      return speak(`Got it: "${text}", from ${spokenDateTime(tz, startsAt)} to ${spokenDateTime(tz, endsAt)}. ${effect[kind]}`, {
+        context: note,
+      });
     },
   );
 

@@ -54,6 +54,23 @@ export interface AskResult {
   toolCalls: { name: string; input: unknown }[];
 }
 
+/**
+ * Today and the next week as "Saturday 2026-10-17", in the household's zone. Spelled out
+ * because models misjudge "this weekend" from the date alone. Steps 6 hours at a time
+ * so a daylight-saving change can't skip a day.
+ */
+export function upcomingDays(now: string, timeZone: string, days = 8): string[] {
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long' });
+  const seen = new Map<string, string>();
+  for (let h = 0; seen.size < days; h += 6) {
+    const t = new Date(Date.parse(now) + h * 3_600_000);
+    const key = date.format(t);
+    if (!seen.has(key)) seen.set(key, weekday.format(t));
+  }
+  return [...seen].map(([d, w], i) => `${w} ${d}${i === 0 ? ' (today)' : i === 1 ? ' (tomorrow)' : ''}`);
+}
+
 export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'now' | 'timeZone'>): string {
   const local = new Date(o.now).toLocaleString('en-US', {
     timeZone: o.timeZone,
@@ -67,7 +84,8 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
   const who =
     o.speaker === 'resident'
       ? `You are speaking with ${o.residentName} herself, by voice. She lives alone and values her independence; she is in charge of Jirani. ` +
-        'When she shares plans, save them with tell_jirani. When she answers a check-in, use answer_checkin with from="resident". ' +
+        'When she shares plans, save them with tell_jirani and repeat the days and times exactly as it confirms them, so she can correct them. ' +
+        'When she answers a check-in, use answer_checkin with from="resident". ' +
         'When she asks you to pause, use pause_monitoring and tell her that family will only see that monitoring is paused, not why.'
       : `You are speaking with ${o.residentName}'s family, by voice or on the dashboard. ` +
         'Use how_is_she for today, weekly_report for the week, why_alert to explain an alert, and view_front_door only when they ask to see the front door. ' +
@@ -78,6 +96,7 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
     `You are Jirani, a caregiving assistant for ${o.residentName}, an older adult who lives alone. Jirani learns her daily rhythm from Ring door and contact sensors; it never watches video unless she agreed to it.`,
     who,
     `It is now ${local} in ${o.residentName}'s time zone (${o.timeZone}). Tool times are "YYYY-MM-DD HH:MM" in that time zone.`,
+    `The coming days are: ${upcomingDays(o.now, o.timeZone).join(', ')}. Take dates from this list; "the weekend" means Saturday and Sunday.`,
     'Only state facts that a tool returned in this conversation, and give the event times the tools report. If the tools do not answer the question, say you don\'t know rather than guessing.',
     'Never diagnose or suggest a medical cause. If a change is worth raising, say it is worth mentioning to her doctor.',
     'Jirani never contacts emergency services itself; a person decides. Never claim that you called anyone.',

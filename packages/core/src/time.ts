@@ -68,4 +68,19 @@ export function hhmm(minutes: number): string {
   return `${h12}:${String(mm).padStart(2, '0')}${suffix}`;
 }
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * "Saturday 17 October, 8:00am" in the household's zone: what a person hears read back.
+ * Midnight is "the start of Saturday 17 October": "12:00am" gets heard (and repeated) as
+ * the night before.
+ */
+export function spokenDateTime(timeZone: string, at: string | number | Date): string {
+  const l = toLocal(timeZone, at);
+  const [, m, d] = l.date.split('-').map(Number) as [number, number, number];
+  const day = `${WEEKDAY_NAMES[l.weekday]} ${d} ${MONTH_NAMES[m - 1]}`;
+  return Math.round(l.minutes) === 0 ? `the start of ${day}` : `${day}, ${hhmm(l.minutes)}`;
+}
+
 export const MINUTE = 60_000;

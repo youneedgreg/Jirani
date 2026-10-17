@@ -5,7 +5,7 @@ import { fromLocal } from '@jirani/core';
 import { demoHousehold, MemoryStore } from '@jirani/mcp';
 import { createApp } from '@jirani/mcp/app';
 import { generate, PRESETS, replay } from 'ring-routine-sim';
-import { ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, systemPrompt, TOOLS } from '../src/index.ts';
+import { ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, systemPrompt, TOOLS, upcomingDays } from '../src/index.ts';
 import { lastToolResults, ScriptedModel } from '../src/testing.ts';
 
 /**
@@ -87,6 +87,23 @@ describe('Jirani agent (Strands + MCP)', () => {
     expect(p).toMatch(/never contacts emergency services/);
     expect(p).toMatch(/keep every step why_alert lists, in its order/);
     expect(p).toMatch(/up to four when you explain an alert/);
+    // The week spelled out, so "this weekend" can't land on Friday.
+    expect(p).toContain('Thursday 2026-10-15 (today), Friday 2026-10-16 (tomorrow), Saturday 2026-10-17, Sunday 2026-10-18');
+  });
+
+  it('lists eight consecutive days, even across the end of daylight saving', () => {
+    // 11:30pm on Saturday 31 October 2026 in New York; clocks go back on 1 November.
+    const days = upcomingDays('2026-11-01T03:30:00.000Z', TZ);
+    expect(days).toEqual([
+      'Saturday 2026-10-31 (today)',
+      'Sunday 2026-11-01 (tomorrow)',
+      'Monday 2026-11-02',
+      'Tuesday 2026-11-03',
+      'Wednesday 2026-11-04',
+      'Thursday 2026-11-05',
+      'Friday 2026-11-06',
+      'Saturday 2026-11-07',
+    ]);
   });
 
   it('fails loudly when the MCP server refuses it, instead of answering without tools', async () => {
