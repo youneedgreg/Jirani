@@ -216,7 +216,8 @@ export function buildMcpServer(store: Store): McpServer {
           case 'suggest_emergency':
             return `told ${who(a.to)} to call 911 if they think she needs help (Jirani never calls for you)`;
           case 'all_clear':
-            return `told ${who(a.to)} that ${name} is OK`;
+            // Neutral on purpose: an alert can close on sensor activity, which isn't someone confirming she's OK.
+            return `let ${who(a.to)} know the alert was closed`;
           case 'log':
             return 'noted it without contacting anyone';
         }
@@ -229,6 +230,12 @@ export function buildMcpServer(store: Store): McpServer {
       const steps = [...e.history]
         .sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
         .map((st) => {
+          const seen = st.note?.match(/^Activity recorded: (.+)$/)?.[1];
+          if (seen) {
+            // Closed by sensors, not by a person: say so plainly so nobody retells it as "Joe confirmed".
+            const told = st.actions.map((a) => who(a.to));
+            return `Sensors then recorded activity (${seen}), so at ${when(st.at)} Jirani closed the alert${told.length ? ` and let ${told.join(' and ')} know` : ''}.`;
+          }
           const actions = st.actions.map(did);
           const list = actions.length > 1 ? `${actions.slice(0, -1).join(', ')} and ${actions.at(-1)}` : (actions[0] ?? 'did nothing yet');
           return `${st.note ? `${st.note.replace(/\.$/, '')}, so at` : 'At'} ${when(st.at)} Jirani ${list}.`;
@@ -242,7 +249,9 @@ export function buildMcpServer(store: Store): McpServer {
         contexts.length ? `Plans I checked: ${contexts.map((c) => `"${c.text}"`).join(', ')}. None covered this time.` : 'No plans on file covered this time.',
         `What Jirani did, in order: ${steps.join(' ')}`,
         e.resolution
-          ? `Resolved at ${when(e.resolution.at)}: ${e.resolution.by} said "${e.resolution.note}".`
+          ? e.resolution.by === 'Jirani'
+            ? `Closed at ${when(e.resolution.at)} because sensors recorded activity. Nobody has confirmed in person that ${name} is OK.`
+            : `Resolved at ${when(e.resolution.at)}: ${e.resolution.by} said "${e.resolution.note}".`
           : `Still open: nobody has confirmed ${name} is OK yet.`,
       ]
         .filter(Boolean)

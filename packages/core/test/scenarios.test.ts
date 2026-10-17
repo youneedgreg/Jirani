@@ -34,6 +34,47 @@ describe('1. a normal routine raises no high alerts', () => {
   });
 });
 
+describe('late-arriving events close an absence alert', () => {
+  it('closes "no morning activity" once her morning shows up, and tells only who was asked', () => {
+    const all = preset('normal');
+    const day = dateOf(20);
+    const night = at(day, '00:00');
+    // Her morning events haven't arrived yet (webhook retries, a replay in progress).
+    let now = at(day, '10:05');
+    let ev = evaluate(state(upTo(all, night)), now);
+    const alert = ev.escalations.find((e) => e.deviationId === `no_morning_activity:${day}`);
+    expect(alert?.status).toBe('open');
+
+    let s: JiraniState = { ...state(upTo(all, night)), escalations: ev.escalations, lastEvaluatedAt: now };
+    now = at(day, '10:26');
+    ev = evaluate(s, now);
+    expect(ev.escalations.find((e) => e.id === alert!.id)?.level).toBe(2);
+
+    // Now the morning's events land.
+    s = { ...s, events: upTo(all, at(day, '10:30')), escalations: ev.escalations, lastEvaluatedAt: now };
+    now = at(day, '10:30');
+    ev = evaluate(s, now);
+    const closed = ev.escalations.find((e) => e.id === alert!.id)!;
+    expect(closed.status).toBe('resolved');
+    expect(closed.resolution).toMatchObject({ by: 'Jirani', note: expect.stringMatching(/^Activity recorded: the .+ at \d+:\d\dam$/) });
+    expect(ev.actions.map((a) => `${a.action.type}:${a.action.to}`)).toEqual(['all_clear:joe']);
+
+    // It stays closed and nothing new opens for the same morning.
+    s = { ...s, escalations: ev.escalations, lastEvaluatedAt: now };
+    ev = evaluate(s, at(day, '11:00'));
+    expect(ev.actions).toEqual([]);
+  });
+
+  it('leaves the alert open while there is still no morning activity', () => {
+    const all = preset('missed-morning');
+    let now = at('2026-10-19', '10:05');
+    const ev = evaluate(state(upTo(all, now)), now);
+    now = at('2026-10-19', '10:30');
+    const next = evaluate({ ...state(upTo(all, now)), escalations: ev.escalations, lastEvaluatedAt: at('2026-10-19', '10:05') }, now);
+    expect(next.escalations.find((e) => e.deviationId === 'no_morning_activity:2026-10-19')?.status).toBe('open');
+  });
+});
+
 describe('2. a silent morning starts the ladder at Margaret herself', () => {
   const all = preset('missed-morning');
   const monday = '2026-10-19';

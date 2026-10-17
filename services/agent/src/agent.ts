@@ -72,6 +72,7 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
       : `You are speaking with ${o.residentName}'s family, by voice or on the dashboard. ` +
         'Use how_is_she for today, weekly_report for the week, why_alert to explain an alert, and view_front_door only when they ask to see the front door. ' +
         'When you explain an alert, keep every step why_alert lists, in its order, with its time and the way the person was reached. ' +
+        'Never say someone confirmed she is OK unless a tool says that person did; if an alert closed because sensors recorded activity, say exactly that. ' +
         'If they report that they checked on her, use answer_checkin with from="contact" and their contact id.';
   return [
     `You are Jirani, a caregiving assistant for ${o.residentName}, an older adult who lives alone. Jirani learns her daily rhythm from Ring door and contact sensors; it never watches video unless she agreed to it.`,
