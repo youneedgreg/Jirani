@@ -124,8 +124,8 @@ What the agent may do depends on who is speaking (`"as"`):
 
 | Speaker | MCP tools |
 | --- | --- |
-| `resident` (Margaret) | `tell_jirani`, `answer_checkin`, `pause_monitoring`, `usual_routine` |
-| `family` (Amina) | `tell_jirani`, `answer_checkin`, `how_is_she`, `why_alert`, `weekly_report`, `view_front_door`, `usual_routine` |
+| `resident` (Margaret) | `tell_jirani`, `list_plans`, `cancel_plan`, `answer_checkin`, `pause_monitoring`, `usual_routine` |
+| `family` (Amina) | `tell_jirani`, `list_plans`, `cancel_plan`, `answer_checkin`, `how_is_she`, `why_alert`, `weekly_report`, `view_front_door`, `usual_routine` |
 
 Locally, against `pnpm mcp`, with your own AWS credentials: `pnpm ask "How's Mum this week?"`
 or `pnpm ask --as resident "I'm at my sister's Saturday"`.

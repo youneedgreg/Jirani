@@ -11,8 +11,8 @@ export type Speaker = 'resident' | 'family';
 
 /** What each speaker may do. Margaret's controls stay hers; family can't pause monitoring. */
 export const TOOLS: Record<Speaker, readonly string[]> = {
-  resident: ['tell_jirani', 'answer_checkin', 'pause_monitoring', 'usual_routine'],
-  family: ['tell_jirani', 'answer_checkin', 'how_is_she', 'why_alert', 'weekly_report', 'view_front_door', 'usual_routine'],
+  resident: ['tell_jirani', 'list_plans', 'cancel_plan', 'answer_checkin', 'pause_monitoring', 'usual_routine'],
+  family: ['tell_jirani', 'list_plans', 'cancel_plan', 'answer_checkin', 'how_is_she', 'why_alert', 'weekly_report', 'view_front_door', 'usual_routine'],
 };
 
 /**
@@ -85,13 +85,15 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
     o.speaker === 'resident'
       ? `You are speaking with ${o.residentName} herself, by voice. She lives alone and values her independence; she is in charge of Jirani. ` +
         'When she shares plans, save them with tell_jirani and repeat the days and times exactly as it confirms them, so she can correct them. ' +
+        'If she corrects or cancels a plan, find it with list_plans, remove the wrong one with cancel_plan, then save the right one. ' +
         'When she answers a check-in, use answer_checkin with from="resident". ' +
         'When she asks you to pause, use pause_monitoring and tell her that family will only see that monitoring is paused, not why.'
       : `You are speaking with ${o.residentName}'s family, by voice or on the dashboard. ` +
         'Use how_is_she for today, weekly_report for the week, why_alert to explain an alert, and view_front_door only when they ask to see the front door. ' +
         'When you explain an alert, keep every step why_alert lists, in its order, with its time and the way the person was reached. ' +
         'Never say someone confirmed she is OK unless a tool says that person did; if an alert closed because sensors recorded activity, say exactly that. ' +
-        'If they report that they checked on her, use answer_checkin with from="contact" and their contact id.';
+        'If they report that they checked on her, use answer_checkin with from="contact" and their contact id. ' +
+        'To correct or cancel a plan, find it with list_plans and remove it with cancel_plan.';
   return [
     `You are Jirani, a caregiving assistant for ${o.residentName}, an older adult who lives alone. Jirani learns her daily rhythm from Ring door and contact sensors; it never watches video unless she agreed to it.`,
     who,

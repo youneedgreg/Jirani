@@ -79,4 +79,27 @@ describe('MCP server over Streamable HTTP', () => {
     expect(camera.structuredContent.allowed).toBe(false);
     await client.close();
   });
+
+  it('reads plans back with weekdays, and lets a wrong one be listed and cancelled', async () => {
+    store.setClock('2026-10-15T22:00:00.000Z'); // Thursday 6pm in New York
+    const client = new Client({ name: 'test', version: '0' });
+    await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`)));
+    const text = async (name: string, args: Record<string, unknown> = {}) =>
+      ((await client.callTool({ name, arguments: args })) as any).content[0].text as string;
+
+    const saved = await text('tell_jirani', { kind: 'away', text: 'This weekend', starts_at: '2026-10-16 00:00', ends_at: '2026-10-17 18:00' });
+    expect(saved).toContain('from the start of Friday 16 October to Saturday 17 October, 6:00pm');
+
+    const listed = await text('list_plans');
+    const id = listed.match(/\[(ctx-[^\]]+)\] "This weekend"/)?.[1];
+    expect(id).toBeDefined();
+
+    expect(await text('cancel_plan', { id })).toMatch(/^Cancelled "This weekend" \(away\), from the start of Friday 16 October/);
+    expect(store.state().contexts.some((c) => c.id === id)).toBe(false);
+    expect(await text('list_plans')).toBe('There are no current or upcoming plans on file.');
+
+    const again = (await client.callTool({ name: 'cancel_plan', arguments: { id } })) as any;
+    expect(again.isError).toBe(true);
+    await client.close();
+  });
 });

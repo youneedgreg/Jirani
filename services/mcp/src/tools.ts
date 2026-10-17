@@ -92,6 +92,45 @@ export function buildMcpServer(store: Store): McpServer {
     },
   );
 
+  // Plans can be wrong ("this weekend" saved as Friday). These let the resident or
+  // family see what's on file and take a wrong one back out.
+  const planWords = (c: ContextNote) =>
+    `"${c.text}" (${c.kind}), from ${spokenDateTime(h().timeZone, c.startsAt)} to ${spokenDateTime(h().timeZone, c.endsAt)}`;
+
+  server.registerTool(
+    'list_plans',
+    {
+      title: 'List plans on file',
+      description: 'Current and upcoming plans Jirani knows about (away, late start, visitor), with their ids for cancel_plan.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const now = Date.parse(store.now());
+      const plans = store
+        .state()
+        .contexts.filter((c) => Date.parse(c.endsAt) >= now)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+      if (plans.length === 0) return speak('There are no current or upcoming plans on file.', { plans: [] });
+      return speak(`Plans on file: ${plans.map((c) => `[${c.id}] ${planWords(c)}`).join('; ')}.`, { plans });
+    },
+  );
+
+  server.registerTool(
+    'cancel_plan',
+    {
+      title: 'Cancel a plan',
+      description: 'Remove a plan that was saved wrongly or is no longer happening. Get the id from list_plans.',
+      inputSchema: { id: z.string().describe('The plan id from list_plans') },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+    },
+    async ({ id }) => {
+      const plan = store.state().contexts.find((c) => c.id === id);
+      if (!plan || !store.removeContext(id)) throw new Error(`No plan with id "${id}". Use list_plans to see the ids.`);
+      return speak(`Cancelled ${planWords(plan)}.`, { cancelled: plan });
+    },
+  );
+
   server.registerTool(
     'answer_checkin',
     {
