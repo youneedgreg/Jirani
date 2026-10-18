@@ -30,7 +30,7 @@ No AWS account, Ring device or API keys needed. The demo starts the real server,
 | Usual thing missing | Fridge or medicine cabinet not opened after getting up | Typical delay + max(3 robust SD, 60 min); low severity, logged only |
 | Unusual event | Door or doorbell at an hour seen on under 4% of days | Front door / doorbell at night is high severity |
 | Long stillness | No activity at home during waking hours | max(1.25 × her 95th-percentile quiet spell, 3 h); not after leaving by the front door |
-| Slow drift | Last 7 lived-in days vs the 21 before | ≥ 2.5 standard errors **and** a practical change (e.g. +1 night trip) |
+| Slow drift | Last 7 lived-in days vs up to 21 days ending a week earlier (a guard week, so a slow rise isn't its own baseline); only days she was home for the morning count | ≥ 2.5 standard errors **and** a practical change (e.g. +1 night trip) |
 
 Context Margaret or Amina gives (`away`, `late_start`, `visitor_expected`) suppresses or shifts these, and every suppression keeps its reason so `why_alert` can explain it. A sensor that goes offline is a maintenance notice, never an emergency. Days she was away are never learned as "normal".
 

@@ -169,6 +169,30 @@ describe('5. slow drift is reported without diagnosing', () => {
     expect(JSON.stringify(report)).not.toMatch(/\b(UTI|[Ii]nfection|[Dd]ementia|[Dd]iagnosis|[Dd]iagnosed)\b/);
   });
 
+  it('leaves out a day that starts in the afternoon (back from being away), even with no plan note', () => {
+    // In the demo she's away Saturday 9am to Sunday 5:30pm. A plan note is optional and
+    // can be wrong, so Sunday must drop out on its own: it has no night at home and a
+    // "wake time" of 5:30pm, which used to fake "getting up later".
+    const now = at('2026-10-19', '11:00');
+    const report = weeklyReport(h, upTo(preset('demo'), now), now);
+    expect(report.weekEnding).toBe('2026-10-17');
+    expect(report.metrics.find((x) => x.key === 'wakeTime')!.flagged).toBe(false);
+  });
+
+  it('keeps a guard week between the windows, so a three-week rise is not its own baseline', () => {
+    // Night trips creep up from about 1 to 4 over three weeks. With the windows touching,
+    // the earlier window already held most of the rise and the report said "steady".
+    const now = at('2026-10-19', '11:00');
+    const report = weeklyReport(h, upTo(preset('demo'), now), now);
+    const night = report.metrics.find((x) => x.key === 'nightBathroom')!;
+    expect(night.flagged).toBe(true);
+    expect(night.recent).toBeGreaterThan(night.prior + 1);
+    // Four weeks of history: 7 recent days, a 7-day guard, so at most 14 earlier days.
+    expect(report.recentDays).toBe(7);
+    expect(report.priorDays).toBeGreaterThanOrEqual(7);
+    expect(report.priorDays).toBeLessThanOrEqual(14);
+  });
+
   it('a steady routine is reported as steady', () => {
     const now = at('2026-10-19', '08:00');
     const report = weeklyReport(h, upTo(preset('normal'), now), now);

@@ -4,7 +4,8 @@ import { hhmm, toLocal } from './time.ts';
 import type { ContextNote, CoreEvent, Household } from './types.ts';
 
 /**
- * Slow drift: compares the last 7 lived-in days with the 21 before them.
+ * Slow drift: compares the last 7 lived-in days with up to 21 days that ended a week
+ * before them (a guard week in between).
  * Wording rule: Jirani describes changes and suggests a conversation.
  * It never names a condition or a diagnosis.
  */
@@ -31,6 +32,9 @@ export interface WeeklyReport {
   suggestion?: string;
 }
 
+/** Local minutes: a day only counts for the weekly comparison if it starts before noon. */
+const HOME_FOR_THE_MORNING_BY = 12 * 60;
+
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -45,11 +49,23 @@ export function weeklyReport(
   for (const c of contexts.filter((c) => c.kind === 'away')) {
     for (let t = Date.parse(c.startsAt); t <= Date.parse(c.endsAt); t += 6 * 3600_000) away.add(toLocal(h.timeZone, t).date);
   }
+  // Only days she was home for the morning. A day whose first activity is in the
+  // afternoon is a return from somewhere (e.g. back from her sister's at 5:30pm): it has
+  // no night at home and a "wake time" that isn't one, so it would fake a drift or hide
+  // one. This works even when no plan note covers the trip.
   const days = dailyMetrics(h, events).filter(
-    (d) => d.date < today && d.indoorCount >= 4 && d.firstActivity !== null && !away.has(d.date),
+    (d) =>
+      d.date < today &&
+      d.indoorCount >= 4 &&
+      d.firstActivity !== null &&
+      d.firstActivity < HOME_FOR_THE_MORNING_BY &&
+      !away.has(d.date),
   );
+  // Prior = up to 21 lived-in days that ended a week before the recent week. The guard
+  // week keeps a slow rise from hiding inside its own baseline: with the windows touching,
+  // three weeks of creeping night trips were already "normal" by the time they peaked.
   const recent = days.slice(-7);
-  const prior = days.slice(-28, -7);
+  const prior = days.slice(-35, -14);
 
   const base: WeeklyReport = {
     householdId: h.id,
