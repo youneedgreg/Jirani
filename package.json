@@ -23,6 +23,7 @@
     "aws:synth": "pnpm --filter @jirani/infra run synth",
     "aws:deploy": "pnpm --filter @jirani/infra run deploy",
     "aws:destroy": "pnpm --filter @jirani/infra run destroy",
+    "aws:story": "tsx services/aws/src/story.ts",
     "ask": "tsx services/agent/src/cli.ts"
   },
   "devDependencies": {
