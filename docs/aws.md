@@ -17,7 +17,7 @@ Voice client / dashboard ──Bearer──▶ AgentFn (/ask) ──Converse─�
 | Piece | AWS | Code |
 | --- | --- | --- |
 | Ring webhook | Lambda + Function URL (no IAM auth: Ring's HMAC signature authenticates it) | `services/aws/src/lambda/webhook.ts` |
-| MCP server + dashboard API | Lambda + Function URL, bearer token checked in code, stateless Streamable HTTP with JSON responses | `services/aws/src/lambda/api.ts` |
+| MCP server + dashboard API | Lambda + Function URL, bearer token checked in code, stateless Streamable HTTP with JSON responses. Read API: `/api/state`, `/api/report`, `/api/timeline`, `/api/days`, `/api/now` | `services/aws/src/lambda/api.ts` |
 | Agent | Lambda + Function URL running a Strands agent on Amazon Bedrock; it reaches Jirani only through the MCP server, with per-speaker tool filters | `services/aws/src/lambda/agent.ts`, `services/agent/src/agent.ts` |
 | Rhythm engine heartbeat | Lambda, invoked by EventBridge Scheduler (`rate(1 minute)` by default) | `services/aws/src/lambda/evaluate.ts` |
 | State | DynamoDB, single table, on-demand, TTL on idempotency keys | `services/aws/src/dynamo-store.ts` |

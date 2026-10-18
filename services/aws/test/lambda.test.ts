@@ -73,6 +73,13 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
     expect((await api('/api/state', {}, 'wrong')).status).toBe(401);
     const res = await fetch(`${apiUrl}/mcp`, { method: 'POST', body: '{}', headers: { 'content-type': 'application/json' } });
     expect(res.status).toBe(401);
+    // The dashboard's timeline and rhythm-chart endpoints too.
+    for (const path of ['/api/timeline', '/api/days']) {
+      expect((await api(path, {}, null)).status, path).toBe(401);
+      const ok = await api(path);
+      expect(ok.status, path).toBe(200);
+      expect(await ok.json(), path).toMatchObject(path === '/api/days' ? { days: expect.any(Array) } : { items: expect.any(Array) });
+    }
   });
 
   it('serves MCP over Streamable HTTP with the caregiving tools', async () => {

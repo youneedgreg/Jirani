@@ -6,7 +6,7 @@ import {
 } from '@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js';
 import { handleRingWebhook } from '@jirani/webhook';
 import { buildMcpServer } from './tools.ts';
-import { clockInfo, dashboardReport, dashboardState, evaluateNow } from './api.ts';
+import { clockInfo, dashboardDays, dashboardReport, dashboardState, dashboardTimeline, evaluateNow } from './api.ts';
 import type { Store } from './store.ts';
 
 export interface AppOptions {
@@ -76,6 +76,8 @@ export function createApp(store: Store, opts: AppOptions) {
   app.get('/api/state', (_req, res) => void res.json(dashboardState(store)));
   app.get('/api/report', (_req, res) => void res.json(dashboardReport(store)));
   app.get('/api/now', (_req, res) => void res.json(clockInfo(store)));
+  app.get('/api/timeline', (_req, res) => void res.json(dashboardTimeline(store)));
+  app.get('/api/days', (_req, res) => void res.json(dashboardDays(store)));
 
   // The runtime trigger. EventBridge Scheduler calls the Lambda equivalent.
   app.post('/internal/evaluate', (_req, res) => void res.json(evaluateNow(store)));
