@@ -93,6 +93,7 @@ docs/                      aws.md, feedback.md, friction-log.md
 | `pnpm ask "<question>"` | Ask the Bedrock agent (`--as resident` for Margaret's side) |
 | `pnpm ddb:local` + `pnpm test:aws` | DynamoDB store and all three Lambda handlers, end to end on DynamoDB Local |
 | `pnpm aws:deploy` / `pnpm aws:destroy` | Deploy to / remove from your AWS account (see [docs/aws.md](docs/aws.md)) |
+| `pnpm aws:story <thursday --plan\|sunday\|monday\|tuesday\|all>` | Play the demo story against the deployed stack, step by step (`--local` for `pnpm mcp`; see [docs/aws.md](docs/aws.md)) |
 | `pnpm mcp` | Local server: `/mcp`, `/ring/webhook`, `/api/state`, `/api/report` |
 | `pnpm sim presets` | List simulated households |
 | `pnpm sim generate --preset demo --out data/demo.ndjson` | Generate events |
