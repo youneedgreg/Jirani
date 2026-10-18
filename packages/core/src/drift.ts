@@ -4,7 +4,8 @@ import { hhmm, toLocal } from './time.ts';
 import type { ContextNote, CoreEvent, Household } from './types.ts';
 
 /**
- * Slow drift: compares the last 7 lived-in days with the 21 before them.
+ * Slow drift: compares the last 7 lived-in days with up to 21 days that ended a week
+ * before them (a guard week in between).
  * Wording rule: Jirani describes changes and suggests a conversation.
  * It never names a condition or a diagnosis.
  */
@@ -60,8 +61,11 @@ export function weeklyReport(
       d.firstActivity < HOME_FOR_THE_MORNING_BY &&
       !away.has(d.date),
   );
+  // Prior = up to 21 lived-in days that ended a week before the recent week. The guard
+  // week keeps a slow rise from hiding inside its own baseline: with the windows touching,
+  // three weeks of creeping night trips were already "normal" by the time they peaked.
   const recent = days.slice(-7);
-  const prior = days.slice(-28, -7);
+  const prior = days.slice(-35, -14);
 
   const base: WeeklyReport = {
     householdId: h.id,

@@ -303,7 +303,7 @@ export function buildMcpServer(store: Store): McpServer {
     'weekly_report',
     {
       title: 'Weekly rhythm report',
-      description: 'Last 7 lived-in days compared with the 3 weeks before. Flags slow changes. Never diagnoses.',
+      description: 'Last 7 lived-in days compared with the weeks before (with a guard week in between). Flags slow changes. Never diagnoses.',
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
