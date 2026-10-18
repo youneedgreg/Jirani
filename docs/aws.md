@@ -97,6 +97,32 @@ curl -X POST <AskUrl> -H "Authorization: Bearer <api token>" -H "Content-Type: a
   -d '{"question": "How is Mum this week?", "as": "family"}'
 ```
 
+### Playing the demo story against the stack
+
+`pnpm aws:story` plays the demo story step by step against the deployed stack, so the
+video can be recorded for real. It reads the stack's outputs from CloudFormation and its
+two secrets from Secrets Manager (nothing on disk, so it also works in a cloud session),
+and it never prints a secret. The demo clock needs a stack deployed with `-c demo=true`.
+Times are Margaret's local time (America/New_York).
+
+```bash
+export AWS_PROFILE=jirani
+pnpm aws:story thursday --plan     # 3.5 weeks of signed events; saves "at my sister's this weekend"
+pnpm aws:story sunday              # Sunday 9:30am: the quiet house, no alert
+pnpm aws:story monday              # the ladder: Margaret 10:05, Joe 10:26, Amina + camera 10:47 (real emails)
+pnpm aws:story ask family "Why did you alert me?"
+pnpm aws:story mcp answer_checkin '{"from":"contact","contact_id":"joe","outcome":"ok","note":"She is in the garden, all good"}'
+pnpm aws:story mcp weekly_report
+pnpm aws:story tuesday             # a real alert, then Tuesday's morning arrives late and closes it
+pnpm aws:story clock real          # back to real time when you're done
+```
+
+- `all` runs `thursday --plan`, `sunday` and `monday` in one go.
+- Single steps for pacing a recording: `clock <YYYY-MM-DD> <HH:MM>`, `evaluate`, `state`, `mcp <tool> ['<json>']`, `ask <family|resident> "<question>"`.
+- `--pause-schedule` turns off the every-minute evaluation while a phase runs, and always turns it back on afterwards. It's optional: the clock is set before each replay, and alerts close themselves if late events show activity, so the schedule can't leave a stale alert behind.
+- `--local` plays the same story against `JIRANI_DEMO=1 pnpm mcp` on port 3333 (CI runs it this way in `services/aws/test/story.test.ts`).
+- Replaying the same story twice changes nothing: events are deduplicated, and alerts already raised aren't raised again. For a clean recording, destroy and redeploy the stack first (that deletes all its data).
+
 ### The agent and Bedrock
 
 The agent calls Amazon Nova 2 Lite through Bedrock's EU inference profile,
