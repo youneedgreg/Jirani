@@ -169,6 +169,16 @@ describe('5. slow drift is reported without diagnosing', () => {
     expect(JSON.stringify(report)).not.toMatch(/\b(UTI|[Ii]nfection|[Dd]ementia|[Dd]iagnosis|[Dd]iagnosed)\b/);
   });
 
+  it('leaves out a day that starts in the afternoon (back from being away), even with no plan note', () => {
+    // In the demo she's away Saturday 9am to Sunday 5:30pm. A plan note is optional and
+    // can be wrong, so Sunday must drop out on its own: it has no night at home and a
+    // "wake time" of 5:30pm, which used to fake "getting up later".
+    const now = at('2026-10-19', '11:00');
+    const report = weeklyReport(h, upTo(preset('demo'), now), now);
+    expect(report.weekEnding).toBe('2026-10-17');
+    expect(report.metrics.find((x) => x.key === 'wakeTime')!.flagged).toBe(false);
+  });
+
   it('a steady routine is reported as steady', () => {
     const now = at('2026-10-19', '08:00');
     const report = weeklyReport(h, upTo(preset('normal'), now), now);
