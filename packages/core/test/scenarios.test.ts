@@ -149,6 +149,22 @@ describe('4. context prevents false alarms ("at my sister\'s Saturday")', () => 
     expect(ev.suppressed.find((s) => s.deviation.kind === 'no_morning_activity')?.contextId).toBe(away.id);
   });
 
+  it('a plan that starts at 5:00am (the agent\'s default when no time is given) still covers the whole morning', () => {
+    // The morning check can't fire before 5am plus 45 minutes, so a 05:00 start protects
+    // the same mornings as a 00:00 start, and reads back as "morning", not "night".
+    const fiveAm = context('away', "At my sister's this weekend", at(sun, '05:00'), at(sun, '22:00'));
+    for (const time of ['05:00', '05:30', '06:00', '07:00', '08:00', '09:30', '11:00']) {
+      const now = at(sun, time);
+      const ev = evaluate(state(upTo(all, now), [fiveAm]), now);
+      expect(ev.deviations.filter((d) => d.severity === 'high'), time).toEqual([]);
+    }
+    // And with no plan at all, nothing fires before 5:45am either.
+    for (const time of ['05:00', '05:30', '05:44']) {
+      const now = at(sun, time);
+      expect(evaluate(state(upTo(all, now)), now).deviations.some((d) => d.kind === 'no_morning_activity'), time).toBe(false);
+    }
+  });
+
   it('away days are not learned as normal days', () => {
     const now = at('2026-10-19', '06:00');
     const b = buildBaseline(h, upTo(all, now), { now, contexts: [away] });
