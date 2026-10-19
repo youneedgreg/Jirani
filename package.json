@@ -16,7 +16,7 @@
     "coverage": "vitest run --coverage",
     "sim": "tsx packages/ring-routine-sim/src/cli.ts",
     "webhook": "tsx services/webhook/src/server.ts",
-    "mcp": "tsx services/mcp/src/server.ts",
+    "mcp": "tsx services/agent/src/server.ts",
     "demo": "tsx services/mcp/src/demo.ts",
     "test:aws": "DYNAMODB_ENDPOINT=${DYNAMODB_ENDPOINT:-http://localhost:8000} vitest run services/aws",
     "ddb:local": "docker run --rm -p 8000:8000 amazon/dynamodb-local",

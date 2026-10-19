@@ -17,6 +17,11 @@ export interface AppOptions {
   corsOrigins?: string[];
   /** Enables /demo/clock for time travel in demos and tests. */
   demo?: boolean;
+  /**
+   * Serves POST /ask (the agent) when given. Passed in by the caller so this package
+   * doesn't depend on the agent; the local server wires in @jirani/agent's answerAsk.
+   */
+  ask?: (body: unknown) => Promise<{ status: number; body: unknown }>;
   log?: (msg: string) => void;
 }
 
@@ -78,6 +83,14 @@ export function createApp(store: Store, opts: AppOptions) {
   app.get('/api/now', (_req, res) => void res.json(clockInfo(store)));
   app.get('/api/timeline', (_req, res) => void res.json(dashboardTimeline(store)));
   app.get('/api/days', (_req, res) => void res.json(dashboardDays(store)));
+
+  if (opts.ask) {
+    const ask = opts.ask;
+    app.post('/ask', express.json({ limit: '16kb' }), async (req, res) => {
+      const r = await ask(req.body);
+      res.status(r.status).json(r.body);
+    });
+  }
 
   // The runtime trigger. EventBridge Scheduler calls the Lambda equivalent.
   app.post('/internal/evaluate', (_req, res) => void res.json(evaluateNow(store)));

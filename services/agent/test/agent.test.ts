@@ -5,7 +5,7 @@ import { fromLocal } from '@jirani/core';
 import { demoHousehold, MemoryStore } from '@jirani/mcp';
 import { createApp } from '@jirani/mcp/app';
 import { generate, PRESETS, replay } from 'ring-routine-sim';
-import { ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, parseAskRequest, systemPrompt, TOOLS, upcomingDays } from '../src/index.ts';
+import { answerAsk, ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, parseAskRequest, systemPrompt, TOOLS, upcomingDays } from '../src/index.ts';
 import { lastToolResults, ScriptedModel } from '../src/testing.ts';
 
 /**
@@ -123,6 +123,33 @@ describe('Jirani agent (Strands + MCP)', () => {
     for (const bad of [null, 'text', {}, { question: ' ' }, { question: 'x'.repeat(1001) }, { question: 'Hi', as: 'neighbour' }, { question: 'Hi', lang: 'fr' }]) {
       expect(parseAskRequest(bad)).toBeNull();
     }
+  });
+
+  it('serves POST /ask on the local server, with the same contract as the Lambda', async () => {
+    const model = new ScriptedModel([{ tool: 'usual_routine' }, { text: 'Suele levantarse a las 7:15.' }]);
+    const local = createApp(store, { hmacKey: KEY, ask: (body) => answerAsk(body, { mcpUrl, model }) }).listen(0, '127.0.0.1');
+    await new Promise((r) => local.once('listening', r));
+    const post = (body: unknown) =>
+      fetch(`http://127.0.0.1:${(local.address() as AddressInfo).port}/ask`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    try {
+      expect((await post({ question: 'Hi', lang: 'fr' })).status).toBe(400);
+      const res = await post({ question: '¿A qué hora se levanta mamá?', lang: 'es' });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ answer: 'Suele levantarse a las 7:15.', toolCalls: [{ name: 'usual_routine', input: {} }] });
+      expect(model.calls[0]!.tools).toEqual([...TOOLS.family].sort());
+      expect(model.calls[0]!.system).toMatch(/Answer in Spanish/);
+    } finally {
+      local.close();
+    }
+  });
+
+  it('has no /ask unless an agent is wired in', async () => {
+    const res = await fetch(mcpUrl.replace('/mcp', '/ask'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"question":"Hi"}' });
+    expect(res.status).toBe(404);
   });
 
   it('lists eight consecutive days, even across the end of daylight saving', () => {

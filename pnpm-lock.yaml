@@ -65,6 +65,9 @@ importers:
 
   services/agent:
     dependencies:
+      '@jirani/mcp':
+        specifier: workspace:*
+        version: link:../mcp
       '@modelcontextprotocol/client':
         specifier: ^2.0.0
         version: 2.3.1
@@ -78,9 +81,6 @@ importers:
       '@jirani/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@jirani/mcp':
-        specifier: workspace:*
-        version: link:../mcp
       ring-routine-sim:
         specifier: workspace:*
         version: link:../../packages/ring-routine-sim

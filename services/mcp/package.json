@@ -19,6 +19,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./app": "./src/app.ts"
+    "./app": "./src/app.ts",
+    "./server": "./src/server.ts"
   }
 }

@@ -153,8 +153,13 @@ What the agent may do depends on who is speaking (`"as"`):
 | `resident` (Margaret) | `tell_jirani`, `list_plans`, `cancel_plan`, `answer_checkin`, `pause_monitoring`, `usual_routine` |
 | `family` (Amina) | `tell_jirani`, `list_plans`, `cancel_plan`, `answer_checkin`, `how_is_she`, `why_alert`, `weekly_report`, `view_front_door`, `usual_routine` |
 
-Locally, against `pnpm mcp`, with your own AWS credentials: `pnpm ask "How's Mum this week?"`
-or `pnpm ask --as resident "I'm at my sister's Saturday"`.
+Locally, against `pnpm mcp`, with your own AWS credentials: `pnpm ask "How's Mum this week?"`,
+`pnpm ask --as resident "I'm at my sister's Saturday"`, or in Spanish
+`pnpm ask --as resident --lang es "Estoy en casa de mi hermana el sábado"`. `pnpm mcp` also serves
+`POST /ask` itself, with the same body as `AskUrl`, so the dashboard's voice client works locally.
+
+`/ask` takes `{"question", "as"?: "family" | "resident", "lang"?: "en" | "es"}`. With `"lang": "es"`
+Jirani answers in Spanish; the tools' own text stays in English, and plans keep the speaker's own words.
 
 With a real Ring app, replace the generated HMAC key with the one Ring issued:
 `aws secretsmanager put-secret-value --secret-id <RingHmacKeySecret> --secret-string '<key>'`
