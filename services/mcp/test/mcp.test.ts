@@ -103,3 +103,32 @@ describe('MCP server over Streamable HTTP', () => {
     await client.close();
   });
 });
+
+describe('Call request from the TV card', () => {
+  it('closes the check-in and asks the family to call, but only for the resident', async () => {
+    const s = new MemoryStore(demoHousehold());
+    const app = createApp(s, { hmacKey: KEY }).listen(0, '127.0.0.1');
+    await new Promise((r) => app.once('listening', r));
+    const url = `http://127.0.0.1:${(app.address() as AddressInfo).port}`;
+    try {
+      const until = '2026-10-19T14:05:00.000Z';
+      await replay(generate({ ...PRESETS['missed-morning']!.options, until }), { url: `${url}/ring/webhook`, hmacKey: KEY });
+      s.setClock(until);
+      await fetch(`${url}/internal/evaluate`, { method: 'POST' }); // the scheduler opens the check-in
+      const client = new Client({ name: 'tv', version: '0' });
+      await client.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`)));
+
+      const byJoe = (await client.callTool({ name: 'answer_checkin', arguments: { from: 'contact', contact_id: 'joe', outcome: 'call_family' } })) as any;
+      expect(byJoe.isError).toBe(true);
+      expect(s.state().escalations.some((e) => e.status === 'open')).toBe(true);
+
+      const call = (await client.callTool({ name: 'answer_checkin', arguments: { from: 'resident', outcome: 'call_family' } })) as any;
+      expect(call.content[0].text).toBe("Thank you, Margaret. I've asked Amina to call you.");
+      expect(s.state().escalations.every((e) => e.status !== 'open')).toBe(true);
+      expect(s.outbox().at(-1)).toMatchObject({ type: 'all_clear', to: 'amina', message: expect.stringMatching(/would like you to call her/) });
+      await client.close();
+    } finally {
+      app.close();
+    }
+  });
+});

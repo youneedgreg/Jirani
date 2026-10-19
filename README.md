@@ -55,7 +55,7 @@ Spec **2025-11-25**, **Streamable HTTP**, stateless (`POST /mcp`). Run it with `
 | `tell_jirani` | Margaret, Amina | Save a plan with start/end ("at my sister's Saturday") |
 | `list_plans` | Margaret, Amina | Current and upcoming plans, with ids |
 | `cancel_plan` | Margaret, Amina | Remove a plan that was saved wrongly or is off |
-| `answer_checkin` | Margaret, Joe | Resolve or escalate the open alert |
+| `answer_checkin` | Margaret, Joe | Resolve or escalate the open alert; Margaret can also ask family to call her (`call_family`, the TV card's second button) |
 | `pause_monitoring` | Margaret | Pause for N hours; family sees *that* it's paused, not why |
 | `how_is_she` | Amina | Today in plain words, from real events |
 | `why_alert` | Amina | Which expectation broke, by how much, what context was checked, who was asked when |
@@ -95,6 +95,7 @@ docs/                      aws.md, feedback.md, friction-log.md
 | `pnpm aws:deploy` / `pnpm aws:destroy` | Deploy to / remove from your AWS account (see [docs/aws.md](docs/aws.md)) |
 | `pnpm aws:story <thursday --plan\|sunday\|monday\|tuesday\|all>` | Play the demo story against the deployed stack, step by step (`--local` for `pnpm mcp`; see [docs/aws.md](docs/aws.md)) |
 | `pnpm mcp` | Local server: `/mcp`, `/ring/webhook`, the dashboard's read API `/api/state`, `/api/report`, `/api/timeline` (today's events in plain words), `/api/days` (28 days of rhythm for the chart), and the agent at `POST /ask` (calls Amazon Nova with your AWS credentials) |
+| `JIRANI_ALLOWED_HOSTS=10.0.2.2 JIRANI_CORS_ORIGINS=http://localhost:8082 pnpm mcp` | Same, reachable from an Android TV emulator and from the TV card's web build |
 | `pnpm sim presets` | List simulated households |
 | `pnpm sim generate --preset demo --out data/demo.ndjson` | Generate events |
 | `pnpm sim replay --file data/demo.ndjson --url http://localhost:3333/ring/webhook --key dev-only-change-me` | Replay them, signed |
