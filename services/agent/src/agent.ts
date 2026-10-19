@@ -9,6 +9,9 @@ import { Agent, BedrockModel, McpClient, type Model } from '@strands-agents/sdk'
 
 export type Speaker = 'resident' | 'family';
 
+/** The language Jirani answers in. Tools and their results stay in English; plans keep the speaker's own words. */
+export type Lang = 'en' | 'es';
+
 /** What each speaker may do. Margaret's controls stay hers; family can't pause monitoring. */
 export const TOOLS: Record<Speaker, readonly string[]> = {
   resident: ['tell_jirani', 'list_plans', 'cancel_plan', 'answer_checkin', 'pause_monitoring', 'usual_routine'],
@@ -41,6 +44,8 @@ export interface AskOptions {
   /** Bearer token for the MCP server, if it requires one. */
   apiToken?: string;
   speaker: Speaker;
+  /** Answer language (default English). */
+  lang?: Lang;
   residentName: string;
   /** "Now" as Jirani sees it (ISO), and the household's time zone, so "Saturday" resolves correctly. */
   now: string;
@@ -71,7 +76,7 @@ export function upcomingDays(now: string, timeZone: string, days = 8): string[] 
   return [...seen].map(([d, w], i) => `${w} ${d}${i === 0 ? ' (today)' : i === 1 ? ' (tomorrow)' : ''}`);
 }
 
-export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'now' | 'timeZone'>): string {
+export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'lang' | 'residentName' | 'now' | 'timeZone'>): string {
   const local = new Date(o.now).toLocaleString('en-US', {
     timeZone: o.timeZone,
     weekday: 'long',
@@ -86,11 +91,13 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
       ? `You are speaking with ${o.residentName} herself, by voice. She lives alone and values her independence; she is in charge of Jirani. ` +
         'When she shares plans, save them with tell_jirani and repeat the days and times exactly as it confirms them, so she can correct them. ' +
         'If she corrects or cancels a plan, find it with list_plans, remove the wrong one with cancel_plan, then save the right one. ' +
-        'When she answers a check-in, use answer_checkin with from="resident". ' +
+        'When she answers a check-in, use answer_checkin with from="resident", then tell her, as Jirani, what the tool confirmed (for example that you marked her as OK and told her family). You are never speaking as her. ' +
         'When she asks you to pause, use pause_monitoring and tell her that family will only see that monitoring is paused, not why.'
       : `You are speaking with ${o.residentName}'s family, by voice or on the dashboard. ` +
         'Use how_is_she for today, weekly_report for the week, why_alert to explain an alert, and view_front_door only when they ask to see the front door. ' +
+        'how_is_she reports what the sensors recorded, not where she is: if it says there is no activity, say no activity has been recorded, never that she is in bed or asleep. ' +
         'When you explain an alert, keep every step why_alert lists, in its order, with its time and the way the person was reached. ' +
+        'Explain an alert in four sentences at most: what was missing compared with her usual time, each step Jirani took with its time, and whether it is still open. Leave out the percentages and the expected-time detail. ' +
         'Never say someone confirmed she is OK unless a tool says that person did; if an alert closed because sensors recorded activity, say exactly that. ' +
         'If they report that they checked on her, use answer_checkin with from="contact" and their contact id. ' +
         'To correct or cancel a plan, find it with list_plans and remove it with cancel_plan.';
@@ -99,10 +106,17 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
     who,
     `It is now ${local} in ${o.residentName}'s time zone (${o.timeZone}). Tool times are "YYYY-MM-DD HH:MM" in that time zone.`,
     `The coming days are: ${upcomingDays(o.now, o.timeZone).join(', ')}. Take dates from this list; "the weekend" means Saturday and Sunday.`,
-    'Only state facts that a tool returned in this conversation, and give the event times the tools report. If the tools do not answer the question, say you don\'t know rather than guessing.',
+    'Only state facts that a tool returned in this conversation, and give the event times the tools report. If the tools do not answer the question, say you don\'t know rather than guessing. Call only the tools the request needs.',
+    'No sensor activity only means nothing was recorded: never guess from it where she is or what she is doing (never say she is in bed, asleep or out).',
+    'When you repeat plans, give each plan on its own, with its start and its end exactly as the tool states them. "From the start of Saturday" means from the beginning of Saturday: say "from Saturday", never a time at night.',
     'Never diagnose or suggest a medical cause. If a change is worth raising, say it is worth mentioning to her doctor.',
     'Jirani never contacts emergency services itself; a person decides. Never claim that you called anyone.',
     'Answer in one to three short sentences that sound natural when spoken aloud (up to four when you explain an alert). No lists, no markdown.',
+    ...(o.lang === 'es'
+      ? [
+          'Answer in Spanish (español), in the same short spoken style and within the same sentence limits. Tool results are in English: summarise them in Spanish rather than translating them word for word, and keep every name, day, date and time exact. Save plan text in her own words, as she said it.',
+        ]
+      : []),
   ].join('\n\n');
 }
 

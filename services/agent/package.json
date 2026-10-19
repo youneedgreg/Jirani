@@ -10,13 +10,13 @@
     "./testing": "./src/testing.ts"
   },
   "dependencies": {
+    "@jirani/mcp": "workspace:*",
     "@modelcontextprotocol/client": "^2.0.0",
     "@strands-agents/sdk": "^1.21.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "@jirani/core": "workspace:*",
-    "@jirani/mcp": "workspace:*",
     "ring-routine-sim": "workspace:*"
   }
 }

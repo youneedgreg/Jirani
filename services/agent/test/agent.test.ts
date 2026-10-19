@@ -5,7 +5,7 @@ import { fromLocal } from '@jirani/core';
 import { demoHousehold, MemoryStore } from '@jirani/mcp';
 import { createApp } from '@jirani/mcp/app';
 import { generate, PRESETS, replay } from 'ring-routine-sim';
-import { ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, systemPrompt, TOOLS, upcomingDays } from '../src/index.ts';
+import { answerAsk, ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, parseAskRequest, systemPrompt, TOOLS, upcomingDays } from '../src/index.ts';
 import { lastToolResults, ScriptedModel } from '../src/testing.ts';
 
 /**
@@ -87,8 +87,69 @@ describe('Jirani agent (Strands + MCP)', () => {
     expect(p).toMatch(/never contacts emergency services/);
     expect(p).toMatch(/keep every step why_alert lists, in its order/);
     expect(p).toMatch(/up to four when you explain an alert/);
+    // Rules from the 19 Oct Nova round: no guessing from silence, plans read back one by one.
+    expect(p).toMatch(/never guess from it where she is or what she is doing/);
+    expect(p).toMatch(/give each plan on its own, with its start and its end exactly as the tool states them/);
+    expect(p).toMatch(/say "from Saturday", never a time at night/);
+    expect(p).toMatch(/how_is_she reports what the sensors recorded, not where she is/);
+    expect(p).toMatch(/Explain an alert in four sentences at most/);
+    expect(systemPrompt({ speaker: 'resident', residentName: 'Margaret', now: thursday, timeZone: TZ })).toMatch(
+      /tell her, as Jirani, what the tool confirmed.*You are never speaking as her/,
+    );
     // The week spelled out, so "this weekend" can't land on Friday.
     expect(p).toContain('Thursday 2026-10-15 (today), Friday 2026-10-16 (tomorrow), Saturday 2026-10-17, Sunday 2026-10-18');
+  });
+
+  it('answers in Spanish only when asked, summarising tools and keeping her own words in plans', async () => {
+    const base = { speaker: 'resident', residentName: 'Margaret', now: thursday, timeZone: TZ } as const;
+    expect(systemPrompt(base)).not.toMatch(/Spanish/);
+    expect(systemPrompt({ ...base, lang: 'en' })).not.toMatch(/Spanish/);
+    const es = systemPrompt({ ...base, lang: 'es' });
+    expect(es).toMatch(/Answer in Spanish/);
+    expect(es).toMatch(/keep every name, day, date and time exact/);
+    expect(es).toMatch(/within the same sentence limits/);
+    expect(es).toMatch(/summarise them in Spanish rather than translating them word for word/);
+    expect(es).toMatch(/Save plan text in her own words/);
+
+    // The rule reaches the model through ask().
+    const model = new ScriptedModel([{ text: 'Hola Margaret.' }]);
+    await ask('¿Cómo estoy?', { ...(await opts(model, 'resident')), lang: 'es' });
+    expect(model.calls[0]!.system).toMatch(/Answer in Spanish/);
+  });
+
+  it('checks /ask bodies the same way for the Lambda and the local server', () => {
+    expect(parseAskRequest({ question: '  How is she?  ' })).toEqual({ question: 'How is she?', speaker: 'family', lang: 'en' });
+    expect(parseAskRequest({ question: 'Hola', as: 'resident', lang: 'es' })).toEqual({ question: 'Hola', speaker: 'resident', lang: 'es' });
+    for (const bad of [null, 'text', {}, { question: ' ' }, { question: 'x'.repeat(1001) }, { question: 'Hi', as: 'neighbour' }, { question: 'Hi', lang: 'fr' }]) {
+      expect(parseAskRequest(bad)).toBeNull();
+    }
+  });
+
+  it('serves POST /ask on the local server, with the same contract as the Lambda', async () => {
+    const model = new ScriptedModel([{ tool: 'usual_routine' }, { text: 'Suele levantarse a las 7:15.' }]);
+    const local = createApp(store, { hmacKey: KEY, ask: (body) => answerAsk(body, { mcpUrl, model }) }).listen(0, '127.0.0.1');
+    await new Promise((r) => local.once('listening', r));
+    const post = (body: unknown) =>
+      fetch(`http://127.0.0.1:${(local.address() as AddressInfo).port}/ask`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    try {
+      expect((await post({ question: 'Hi', lang: 'fr' })).status).toBe(400);
+      const res = await post({ question: '¿A qué hora se levanta mamá?', lang: 'es' });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ answer: 'Suele levantarse a las 7:15.', toolCalls: [{ name: 'usual_routine', input: {} }] });
+      expect(model.calls[0]!.tools).toEqual([...TOOLS.family].sort());
+      expect(model.calls[0]!.system).toMatch(/Answer in Spanish/);
+    } finally {
+      local.close();
+    }
+  });
+
+  it('has no /ask unless an agent is wired in', async () => {
+    const res = await fetch(mcpUrl.replace('/mcp', '/ask'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"question":"Hi"}' });
+    expect(res.status).toBe(404);
   });
 
   it('lists eight consecutive days, even across the end of daylight saving', () => {
