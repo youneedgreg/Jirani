@@ -9,6 +9,9 @@ import { Agent, BedrockModel, McpClient, type Model } from '@strands-agents/sdk'
 
 export type Speaker = 'resident' | 'family';
 
+/** The language Jirani answers in. Tools and their results stay in English; plans keep the speaker's own words. */
+export type Lang = 'en' | 'es';
+
 /** What each speaker may do. Margaret's controls stay hers; family can't pause monitoring. */
 export const TOOLS: Record<Speaker, readonly string[]> = {
   resident: ['tell_jirani', 'list_plans', 'cancel_plan', 'answer_checkin', 'pause_monitoring', 'usual_routine'],
@@ -41,6 +44,8 @@ export interface AskOptions {
   /** Bearer token for the MCP server, if it requires one. */
   apiToken?: string;
   speaker: Speaker;
+  /** Answer language (default English). */
+  lang?: Lang;
   residentName: string;
   /** "Now" as Jirani sees it (ISO), and the household's time zone, so "Saturday" resolves correctly. */
   now: string;
@@ -71,7 +76,7 @@ export function upcomingDays(now: string, timeZone: string, days = 8): string[] 
   return [...seen].map(([d, w], i) => `${w} ${d}${i === 0 ? ' (today)' : i === 1 ? ' (tomorrow)' : ''}`);
 }
 
-export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'now' | 'timeZone'>): string {
+export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'lang' | 'residentName' | 'now' | 'timeZone'>): string {
   const local = new Date(o.now).toLocaleString('en-US', {
     timeZone: o.timeZone,
     weekday: 'long',
@@ -103,6 +108,11 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'residentName' | 'n
     'Never diagnose or suggest a medical cause. If a change is worth raising, say it is worth mentioning to her doctor.',
     'Jirani never contacts emergency services itself; a person decides. Never claim that you called anyone.',
     'Answer in one to three short sentences that sound natural when spoken aloud (up to four when you explain an alert). No lists, no markdown.',
+    ...(o.lang === 'es'
+      ? [
+          'Answer in Spanish (español), in the same short spoken style and within the same sentence limits. Tool results are in English: summarise them in Spanish rather than translating them word for word, and keep every name, day, date and time exact. Save plan text in her own words, as she said it.',
+        ]
+      : []),
   ].join('\n\n');
 }
 

@@ -91,6 +91,23 @@ describe('Jirani agent (Strands + MCP)', () => {
     expect(p).toContain('Thursday 2026-10-15 (today), Friday 2026-10-16 (tomorrow), Saturday 2026-10-17, Sunday 2026-10-18');
   });
 
+  it('answers in Spanish only when asked, summarising tools and keeping her own words in plans', async () => {
+    const base = { speaker: 'resident', residentName: 'Margaret', now: thursday, timeZone: TZ } as const;
+    expect(systemPrompt(base)).not.toMatch(/Spanish/);
+    expect(systemPrompt({ ...base, lang: 'en' })).not.toMatch(/Spanish/);
+    const es = systemPrompt({ ...base, lang: 'es' });
+    expect(es).toMatch(/Answer in Spanish/);
+    expect(es).toMatch(/keep every name, day, date and time exact/);
+    expect(es).toMatch(/within the same sentence limits/);
+    expect(es).toMatch(/summarise them in Spanish rather than translating them word for word/);
+    expect(es).toMatch(/Save plan text in her own words/);
+
+    // The rule reaches the model through ask().
+    const model = new ScriptedModel([{ text: 'Hola Margaret.' }]);
+    await ask('¿Cómo estoy?', { ...(await opts(model, 'resident')), lang: 'es' });
+    expect(model.calls[0]!.system).toMatch(/Answer in Spanish/);
+  });
+
   it('lists eight consecutive days, even across the end of daylight saving', () => {
     // 11:30pm on Saturday 31 October 2026 in New York; clocks go back on 1 November.
     const days = upcomingDays('2026-11-01T03:30:00.000Z', TZ);
