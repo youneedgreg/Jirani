@@ -87,6 +87,15 @@ describe('Jirani agent (Strands + MCP)', () => {
     expect(p).toMatch(/never contacts emergency services/);
     expect(p).toMatch(/keep every step why_alert lists, in its order/);
     expect(p).toMatch(/up to four when you explain an alert/);
+    // Rules from the 19 Oct Nova round: no guessing from silence, plans read back one by one.
+    expect(p).toMatch(/never guess from it where she is or what she is doing/);
+    expect(p).toMatch(/give each plan on its own, with its start and its end exactly as the tool states them/);
+    expect(p).toMatch(/say "from Saturday", never a time at night/);
+    expect(p).toMatch(/how_is_she reports what the sensors recorded, not where she is/);
+    expect(p).toMatch(/Explain an alert in four sentences at most/);
+    expect(systemPrompt({ speaker: 'resident', residentName: 'Margaret', now: thursday, timeZone: TZ })).toMatch(
+      /tell her, as Jirani, what the tool confirmed.*You are never speaking as her/,
+    );
     // The week spelled out, so "this weekend" can't land on Friday.
     expect(p).toContain('Thursday 2026-10-15 (today), Friday 2026-10-16 (tomorrow), Saturday 2026-10-17, Sunday 2026-10-18');
   });
