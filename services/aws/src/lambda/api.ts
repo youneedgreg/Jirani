@@ -1,6 +1,6 @@
 import type { LambdaFunctionURLEvent, LambdaFunctionURLResult } from 'aws-lambda';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import { buildMcpServer, clockInfo, dashboardReport, dashboardState, evaluateNow } from '@jirani/mcp';
+import { buildMcpServer, clockInfo, dashboardDays, dashboardReport, dashboardState, dashboardTimeline, evaluateNow } from '@jirani/mcp';
 import { withStore, type DynamoStore } from '../dynamo-store.ts';
 import { apiToken, bearerMatches, documentClient, household, requireEnv } from '../config.ts';
 
@@ -76,6 +76,8 @@ export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunc
     if (method === 'GET' && path === '/api/state') return json(200, await run(dashboardState));
     if (method === 'GET' && path === '/api/report') return json(200, await run(dashboardReport));
     if (method === 'GET' && path === '/api/now') return json(200, await run(clockInfo));
+    if (method === 'GET' && path === '/api/timeline') return json(200, await run(dashboardTimeline));
+    if (method === 'GET' && path === '/api/days') return json(200, await run(dashboardDays));
     if (method === 'POST' && path === '/internal/evaluate') return json(200, await run(evaluateNow));
     if (demo && method === 'POST' && path === '/demo/clock') {
       const now = (JSON.parse(rawBody(event) ?? '{}') as { now?: string | null }).now ?? null;

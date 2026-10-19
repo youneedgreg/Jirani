@@ -1,4 +1,4 @@
-import { summariseDay, weeklyReport } from '@jirani/core';
+import { awayDates, countsForWeekly, dailyMetrics, summariseDay, todayTimeline, toLocal, weeklyReport } from '@jirani/core';
 import { runEvaluation } from './runtime.ts';
 import type { Store } from './store.ts';
 
@@ -21,6 +21,42 @@ export function dashboardState(store: Store) {
     outbox: store.outbox().slice(-50),
     paused: s.pause && Date.parse(s.pause.until) > Date.parse(store.now()) ? { until: s.pause.until } : null,
   };
+}
+
+/** GET /api/timeline: today's events in plain words, oldest first ("7:12am Bathroom door opened"). */
+export function dashboardTimeline(store: Store) {
+  const s = store.state();
+  return todayTimeline(s.household, s.events, store.now());
+}
+
+/**
+ * GET /api/days: the last 28 days before today, one row each, for the rhythm chart.
+ * firstActivity is minutes after local midnight (null if she wasn't up at home).
+ * `away` marks days a plan said she was away; `counted` is whether the weekly report
+ * compares that day (home for the morning, enough activity, not away).
+ */
+export function dashboardDays(store: Store, days = 28) {
+  const s = store.state();
+  const h = s.household;
+  const now = store.now();
+  const today = toLocal(h.timeZone, now).date;
+  const away = awayDates(h, s.contexts);
+  const past = s.events.filter((e) => Date.parse(e.at) <= Date.parse(now));
+  const rows = dailyMetrics(h, past)
+    .filter((d) => d.date < today)
+    .slice(-days)
+    .map((d) => ({
+      date: d.date,
+      weekday: d.weekday,
+      firstActivity: d.firstActivity,
+      nightBathroom: d.nightBathroom,
+      outings: d.frontDoorOpens,
+      visitors: d.visitors,
+      indoorCount: d.indoorCount,
+      away: away.has(d.date),
+      counted: countsForWeekly(d, away),
+    }));
+  return { timeZone: h.timeZone, residentName: h.residentName, days: rows };
 }
 
 /** GET /api/now: Jirani's clock (the demo clock when set) and the household's time zone, for the agent. */

@@ -129,20 +129,24 @@ export interface BaselineOptions {
 /** Days with fewer openings than this are treated as "not home" and skipped. */
 const MIN_INDOOR_PER_DAY = 4;
 
+/** Local dates that an "away" plan touches (stepped 6 hours at a time, so every date in the span is caught). */
+export function awayDates(h: Household, contexts: ContextNote[] = []): Set<string> {
+  const dates = new Set<string>();
+  for (const c of contexts) {
+    if (c.kind !== 'away') continue;
+    for (let t = Date.parse(c.startsAt); t <= Date.parse(c.endsAt); t += 6 * 3600_000) dates.add(toLocal(h.timeZone, t).date);
+  }
+  return dates;
+}
+
 export function buildBaseline(h: Household, events: CoreEvent[], opts: BaselineOptions): Baseline {
   const today = toLocal(h.timeZone, opts.now).date;
   const lookback = opts.lookbackDays ?? 28;
-  const awayDates = new Set<string>();
-  for (const c of opts.contexts ?? []) {
-    if (c.kind !== 'away') continue;
-    for (let t = Date.parse(c.startsAt); t <= Date.parse(c.endsAt); t += 6 * 3600_000) {
-      awayDates.add(toLocal(h.timeZone, t).date);
-    }
-  }
+  const away = awayDates(h, opts.contexts);
 
   const daily = dailyMetrics(h, events)
     .filter((d) => d.date < today)
-    .filter((d) => d.indoorCount >= MIN_INDOOR_PER_DAY && d.firstActivity !== null && !awayDates.has(d.date))
+    .filter((d) => d.indoorCount >= MIN_INDOOR_PER_DAY && d.firstActivity !== null && !away.has(d.date))
     .slice(-lookback);
 
   const hourly = {} as Record<Role, number[]>;
