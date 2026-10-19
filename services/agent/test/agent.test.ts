@@ -98,6 +98,8 @@ describe('Jirani agent (Strands + MCP)', () => {
     );
     // The week spelled out, so "this weekend" can't land on Friday.
     expect(p).toContain('Thursday 2026-10-15 (today), Friday 2026-10-16 (tomorrow), Saturday 2026-10-17, Sunday 2026-10-18');
+    // A midnight start was retold as "Saturday night"; 05:00 is still before any morning check.
+    expect(p).toMatch(/start it at 05:00 on the first day, not 00:00/);
   });
 
   it('answers in Spanish only when asked, summarising tools and keeping her own words in plans', async () => {

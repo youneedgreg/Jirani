@@ -106,6 +106,9 @@ export function systemPrompt(o: Pick<AskOptions, 'speaker' | 'lang' | 'residentN
     who,
     `It is now ${local} in ${o.residentName}'s time zone (${o.timeZone}). Tool times are "YYYY-MM-DD HH:MM" in that time zone.`,
     `The coming days are: ${upcomingDays(o.now, o.timeZone).join(', ')}. Take dates from this list; "the weekend" means Saturday and Sunday.`,
+    // A midnight start got retold as "Saturday night". Jirani's morning starts at 5am,
+    // so a 05:00 start protects the same mornings and reads back as "Saturday morning".
+    'When a plan gives days but no start time, start it at 05:00 on the first day, not 00:00.',
     'Only state facts that a tool returned in this conversation, and give the event times the tools report. If the tools do not answer the question, say you don\'t know rather than guessing. Call only the tools the request needs.',
     'No sensor activity only means nothing was recorded: never guess from it where she is or what she is doing (never say she is in bed, asleep or out).',
     'When you repeat plans, give each plan on its own, with its start and its end exactly as the tool states them. "From the start of Saturday" means from the beginning of Saturday: say "from Saturday", never a time at night.',
