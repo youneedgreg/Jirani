@@ -35,7 +35,9 @@ describe('escalation ladder', () => {
     e = respond(e, h, { from: 'resident', outcome: 'ok', note: 'Slept in' }, plus(25));
     expect(e.status).toBe('resolved');
     expect(e.resolution?.by).toBe('Margaret');
-    expect(e.history.at(-1)!.actions).toEqual([expect.objectContaining({ type: 'all_clear', to: 'joe' })]);
+    expect(e.history.at(-1)!.actions).toEqual([
+      expect.objectContaining({ type: 'all_clear', to: 'joe', message: 'All good: Margaret answered Jirani and is OK. "Slept in"' }),
+    ]);
   });
 
   it('resolves a call request and asks every family contact to call, even before the ladder reached them', () => {
@@ -47,7 +49,7 @@ describe('escalation ladder', () => {
     const actions = e.history.at(-1)!.actions;
     expect(actions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ type: 'all_clear', to: 'joe', message: expect.stringMatching(/confirmed Margaret is OK/) }),
+        expect.objectContaining({ type: 'all_clear', to: 'joe', message: expect.stringMatching(/Margaret answered Jirani and is OK/) }),
         expect.objectContaining({ type: 'all_clear', to: 'amina', message: expect.stringMatching(/would like you to call her/) }),
       ]),
     );

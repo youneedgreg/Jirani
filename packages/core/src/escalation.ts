@@ -183,7 +183,10 @@ export function respond(e: Escalation, h: Household, r: Response, now: string): 
       ...[...informed].filter((id) => !callers.has(id)).map((id) => ({
         type: 'all_clear' as const,
         to: id,
-        message: `All good: ${who} confirmed ${h.residentName} is OK.${quote}`,
+        message:
+          r.from === 'resident'
+            ? `All good: ${h.residentName} answered Jirani and is OK.${quote}`
+            : `All good: ${who} confirmed ${h.residentName} is OK.${quote}`,
       })),
       ...[...callers].map((id) => ({
         type: 'all_clear' as const,
