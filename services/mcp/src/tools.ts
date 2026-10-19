@@ -140,12 +140,15 @@ export function buildMcpServer(store: Store): McpServer {
       inputSchema: {
         from: z.enum(['resident', 'contact']).describe('Who is answering'),
         contact_id: z.string().optional().describe('Required when from=contact, e.g. "joe"'),
-        outcome: z.enum(['ok', 'problem', 'no_answer']).describe('ok = all fine; problem = needs help; no_answer = nobody came to the door'),
+        outcome: z
+          .enum(['ok', 'call_family', 'problem', 'no_answer'])
+          .describe('ok = all fine; call_family = the resident is fine and wants family to call her; problem = needs help; no_answer = nobody came to the door'),
         note: z.string().optional(),
       },
       annotations: { readOnlyHint: false },
     },
     async ({ from, contact_id, outcome, note }) => {
+      if (outcome === 'call_family' && from !== 'resident') throw new Error('Only the resident can ask family to call her.');
       if (from === 'contact' && !h().contacts.some((c) => c.id === contact_id)) {
         throw new Error(`Unknown contact "${contact_id}". Known: ${h().contacts.map((c) => c.id).join(', ')}`);
       }
@@ -167,8 +170,14 @@ export function buildMcpServer(store: Store): McpServer {
         }
       }
       const name = h().residentName;
+      const family = h()
+        .contacts.filter((c) => c.relation === 'family')
+        .map((c) => c.name)
+        .join(' and ');
       const text =
-        outcome === 'ok'
+        outcome === 'call_family'
+          ? `Thank you, ${name}. I've asked ${family || 'your family'} to call you.`
+          : outcome === 'ok'
           ? from === 'resident'
             ? `Thank you, ${name}. Glad you're alright. I've let anyone I'd contacted know.`
             : `Thanks. I've marked ${name} as OK and told the family.`

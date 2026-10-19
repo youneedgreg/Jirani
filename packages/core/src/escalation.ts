@@ -163,7 +163,8 @@ export function closeOnActivity(e: Escalation, h: Household, seen: string, now: 
 export interface Response {
   from: 'resident' | 'contact';
   contactId?: string;
-  outcome: 'ok' | 'problem' | 'no_answer';
+  /** call_family: the resident is OK and asks family to call her (from her TV card). */
+  outcome: 'ok' | 'call_family' | 'problem' | 'no_answer';
   note?: string;
 }
 
@@ -172,19 +173,29 @@ export function respond(e: Escalation, h: Household, r: Response, now: string): 
   const who =
     r.from === 'resident' ? h.residentName : (h.contacts.find((c) => c.id === r.contactId)?.name ?? 'a contact');
 
-  if (r.outcome === 'ok') {
+  if (r.outcome === 'ok' || r.outcome === 'call_family') {
     const informed = new Set(e.history.flatMap((s) => s.actions.filter((a) => a.type === 'notify_contact').map((a) => a.to!)));
     informed.delete(r.contactId ?? '');
-    const allClear: Action[] = [...informed].map((id) => ({
-      type: 'all_clear',
-      to: id,
-      message: `All good: ${who} confirmed ${h.residentName} is OK.${r.note ? ` "${r.note}"` : ''}`,
-    }));
+    // A call request reaches every family contact, even if the ladder never got to them.
+    const callers = new Set(r.outcome === 'call_family' ? family(h).map((c) => c.id) : []);
+    const quote = r.note ? ` "${r.note}"` : '';
+    const allClear: Action[] = [
+      ...[...informed].filter((id) => !callers.has(id)).map((id) => ({
+        type: 'all_clear' as const,
+        to: id,
+        message: `All good: ${who} confirmed ${h.residentName} is OK.${quote}`,
+      })),
+      ...[...callers].map((id) => ({
+        type: 'all_clear' as const,
+        to: id,
+        message: `${h.residentName} answered her check-in: she's OK and would like you to call her.${quote}`,
+      })),
+    ];
     return {
       ...e,
       status: 'resolved',
       history: [...e.history, { at: now, level: e.level, actions: allClear, note: `Resolved by ${who}` }],
-      resolution: { at: now, by: who, note: r.note ?? 'OK' },
+      resolution: { at: now, by: who, note: r.note ?? (r.outcome === 'call_family' ? 'OK, asked family to call' : 'OK') },
     };
   }
 

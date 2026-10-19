@@ -55,7 +55,7 @@ Spec **2025-11-25**, **Streamable HTTP**, stateless (`POST /mcp`). Run it with `
 | `tell_jirani` | Margaret, Amina | Save a plan with start/end ("at my sister's Saturday") |
 | `list_plans` | Margaret, Amina | Current and upcoming plans, with ids |
 | `cancel_plan` | Margaret, Amina | Remove a plan that was saved wrongly or is off |
-| `answer_checkin` | Margaret, Joe | Resolve or escalate the open alert |
+| `answer_checkin` | Margaret, Joe | Resolve or escalate the open alert; Margaret can also ask family to call her (`call_family`, the TV card's second button) |
 | `pause_monitoring` | Margaret | Pause for N hours; family sees *that* it's paused, not why |
 | `how_is_she` | Amina | Today in plain words, from real events |
 | `why_alert` | Amina | Which expectation broke, by how much, what context was checked, who was asked when |
