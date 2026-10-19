@@ -5,7 +5,7 @@ import { fromLocal } from '@jirani/core';
 import { demoHousehold, MemoryStore } from '@jirani/mcp';
 import { createApp } from '@jirani/mcp/app';
 import { generate, PRESETS, replay } from 'ring-routine-sim';
-import { ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, systemPrompt, TOOLS, upcomingDays } from '../src/index.ts';
+import { ask, bedrockModel, DEFAULT_BEDROCK_MODEL_ID, DEFAULT_BEDROCK_REGION, fetchClock, parseAskRequest, systemPrompt, TOOLS, upcomingDays } from '../src/index.ts';
 import { lastToolResults, ScriptedModel } from '../src/testing.ts';
 
 /**
@@ -115,6 +115,14 @@ describe('Jirani agent (Strands + MCP)', () => {
     const model = new ScriptedModel([{ text: 'Hola Margaret.' }]);
     await ask('¿Cómo estoy?', { ...(await opts(model, 'resident')), lang: 'es' });
     expect(model.calls[0]!.system).toMatch(/Answer in Spanish/);
+  });
+
+  it('checks /ask bodies the same way for the Lambda and the local server', () => {
+    expect(parseAskRequest({ question: '  How is she?  ' })).toEqual({ question: 'How is she?', speaker: 'family', lang: 'en' });
+    expect(parseAskRequest({ question: 'Hola', as: 'resident', lang: 'es' })).toEqual({ question: 'Hola', speaker: 'resident', lang: 'es' });
+    for (const bad of [null, 'text', {}, { question: ' ' }, { question: 'x'.repeat(1001) }, { question: 'Hi', as: 'neighbour' }, { question: 'Hi', lang: 'fr' }]) {
+      expect(parseAskRequest(bad)).toBeNull();
+    }
   });
 
   it('lists eight consecutive days, even across the end of daylight saving', () => {

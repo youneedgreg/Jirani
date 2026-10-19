@@ -177,6 +177,8 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
     expect((await askAgent({ question: 'Why did you alert me?' }, null)).status).toBe(401);
     expect((await askAgent({ question: '' })).status).toBe(400);
     expect((await askAgent({ question: 'Hi', as: 'neighbour' })).status).toBe(400);
+    expect((await askAgent({ question: 'Hola', lang: 'fr' })).status).toBe(400);
+    expect(model.calls).toHaveLength(0);
 
     const res = await askAgent({ question: 'Why did you alert me?', as: 'family' });
     expect(res.status).toBe(200);
@@ -185,5 +187,21 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
     const toolResult = JSON.stringify(model.calls[1]!.messages.at(-1));
     expect(toolResult).toContain('No morning activity');
     expect(model.calls[0]!.system).toContain('Monday, October 19, 2026');
+    expect(model.calls[0]!.system).not.toMatch(/Answer in Spanish/);
+  });
+
+  it('passes the answer language through to the agent', async () => {
+    const { createAgentHandler } = await import('../src/lambda/agent.ts');
+    const model = new ScriptedModel([{ text: 'Margaret está bien.' }]);
+    const agent = await functionUrl(createAgentHandler(() => model));
+    servers.push(agent.server);
+    const res = await fetch(`${agent.url}/ask`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` },
+      body: JSON.stringify({ question: '¿Cómo está mamá?', as: 'family', lang: 'es' }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ answer: 'Margaret está bien.', toolCalls: [] });
+    expect(model.calls[0]!.system).toMatch(/Answer in Spanish/);
   });
 });
