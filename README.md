@@ -81,7 +81,7 @@ pnpm demo
 
 No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would.
 
-- **Tests:** `pnpm test` (106 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`.
+- **Tests:** `pnpm test` (109 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`.
 - **Deploy your own:** `pnpm aws:deploy` (see [docs/aws.md](docs/aws.md)).
 - **Live family dashboard:** [jiraniamazon.vercel.app](https://jiraniamazon.vercel.app) is invite-only, because it shows household data and each spoken question is a paid Amazon Nova call. The video shows it.
 
@@ -117,7 +117,7 @@ Context Margaret or Amina gives (`away`, `late_start`, `visitor_expected`) suppr
 
 ### Fire TV check-in card
 
-[youneedgreg/react-native-multi-tv-app-sample](https://github.com/youneedgreg/react-native-multi-tv-app-sample). A check-in card over whatever Margaret is watching: "I'm OK" resolves the alert, "Call Amina" asks family to call her (`answer_checkin` with `call_family`). English or Spanish, in the Expo app and the Vega app.
+[youneedgreg/react-native-multi-tv-app-sample](https://github.com/youneedgreg/react-native-multi-tv-app-sample). A check-in card over whatever Margaret is watching: "I'm OK" resolves the alert, "Call Amina" asks family to call her (`answer_checkin` with `call_family`). English or Spanish, in the Expo app and the Vega app; it runs on the Vega Virtual Device (Vega SDK 0.24).
 
 ### MCP server (Alexa+ track)
 
@@ -151,7 +151,7 @@ pnpm ask --lang es "¿Cómo está mamá hoy?"
 - **This repository** was started for the hackathon (first commit 15 Oct 2026): the rhythm engine, Ring client and webhook verification, simulator, MCP server, agent, AWS stack and tests.
 - **The family dashboard** is a fork of Amazon's [`ring-api-helloworld`](https://github.com/AmazonAppDev/ring-api-helloworld). Amazon's live-view sample is kept at `/sample`; the family pages, the `/talk` voice client and Clerk sign-in are ours (15 commits on top of the sample's 12, as of 20 Oct).
 - **The TV card** is added to Amazon's [`react-native-multi-tv-app-sample`](https://github.com/AmazonAppDev/react-native-multi-tv-app-sample); the TV app shell is Amazon's.
-- **[`ring-routine-sim`](https://github.com/youneedgreg/ring-routine-sim)** is new and open source (MIT): weeks of Ring-shaped household events with drift injection and HMAC-signed replay.
+- **[`ring-routine-sim`](https://github.com/youneedgreg/ring-routine-sim)** is new and open source (MIT), published on npm as [`ring-routine-sim`](https://www.npmjs.com/package/ring-routine-sim): weeks of Ring-shaped household events with drift injection and HMAC-signed replay.
 
 ## How Jirani compares
 
@@ -195,11 +195,11 @@ docs/                      aws.md, feedback.md, friction-log.md
 
 ## Status
 
-**Live and tested:** the rhythm engine, HMAC-verified Ring webhooks (1,024 signed events accepted on AWS, 0 rejected), the MCP server (called from the MCP Inspector against AWS), the Strands agent on Amazon Nova (English and Spanish), the AWS stack (DynamoDB, Lambda with Function URLs, EventBridge Scheduler, SES, Secrets Manager), real emails through SES, the family dashboard and voice client on Vercel behind Clerk sign-in, and the TV card on the web build against a local Jirani.
+**Live and tested:** the rhythm engine, HMAC-verified Ring webhooks (1,024 signed events accepted on AWS, 0 rejected, before the switch to Ring's documented v1.1 payload; the same 1,024 accepted locally after it), the MCP server (called from the MCP Inspector against AWS), the Strands agent on Amazon Nova (English and Spanish), the AWS stack (DynamoDB, Lambda with Function URLs, EventBridge Scheduler, SES, Secrets Manager), real emails through SES, the family dashboard and voice client on Vercel behind Clerk sign-in, and the TV card against a local Jirani on the Vega Virtual Device ("I'm OK" resolves the alert) and on the web build (both buttons).
 
 **Ring API:** the Ring client was run against the real Ring API with a Ring Developer Playground token: devices (with `?include=`), status, capabilities, event history and the user endpoint all answered as expected.
 
-**Not yet:** the TV card hasn't run on the Vega Virtual Device yet, and the dashboard's live-view page for `view_front_door` isn't built yet.
+**Not yet:** the dashboard's live-view page for `view_front_door` isn't built yet.
 
 **Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in Ring's documented webhook v1.1 payload (event name in `data.type`, device in `attributes.source`, epoch-millisecond timestamps), signed exactly like Ring signs webhooks. Contact-sensor events use Ring's names, `contact_sensor_faulted` (opened) and `contact_sensor_cleared` (closed); Ring marks sensor support as Early Access, so they may still change.
 
