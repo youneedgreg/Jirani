@@ -24,6 +24,6 @@
     "@aws-sdk/client-lambda": "^3.1152.0",
     "@aws-sdk/client-scheduler": "^3.1152.0",
     "@types/aws-lambda": "^8.10.160",
-    "ring-routine-sim": "workspace:*"
+    "ring-routine-sim": "0.1.0"
   }
 }

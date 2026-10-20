@@ -15,8 +15,8 @@ importers:
         specifier: workspace:*
         version: link:packages/ring
       ring-routine-sim:
-        specifier: workspace:*
-        version: link:packages/ring-routine-sim
+        specifier: 0.1.0
+        version: 0.1.0
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
@@ -53,7 +53,11 @@ importers:
         specifier: ^4.20.3
         version: 4.23.15
 
-  packages/core: {}
+  packages/core:
+    devDependencies:
+      ring-routine-sim:
+        specifier: 0.1.0
+        version: 0.1.0
 
   packages/ring:
     dependencies:
@@ -82,8 +86,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
       ring-routine-sim:
-        specifier: workspace:*
-        version: link:../../packages/ring-routine-sim
+        specifier: 0.1.0
+        version: 0.1.0
 
   services/aws:
     dependencies:
@@ -128,8 +132,8 @@ importers:
         specifier: ^8.10.160
         version: 8.10.164
       ring-routine-sim:
-        specifier: workspace:*
-        version: link:../../packages/ring-routine-sim
+        specifier: 0.1.0
+        version: 0.1.0
 
   services/mcp:
     dependencies:
@@ -149,8 +153,8 @@ importers:
         specifier: ^5.1.0
         version: 5.3.0
       ring-routine-sim:
-        specifier: workspace:*
-        version: link:../../packages/ring-routine-sim
+        specifier: 0.1.0
+        version: 0.1.0
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -1375,6 +1379,11 @@ packages:
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
+
+  ring-routine-sim@0.1.0:
+    resolution: {integrity: sha512-7cUadDdEXZujsDdTcz5eS+Ni1/XvV2t8uVsrrOkTbByQiUwn4WQcUEV6aDJDsYVbrI/yvF9FQAtVpHC/TSsH1g==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   rollup@4.64.7:
     resolution: {integrity: sha512-aCiJONoZp0lNGJ6sYqspLkh6UXaWEey/7Ko2TZyXQ4kgzAhDUxAgbt/oulXKmD+zFHXw1k+RF6ZZWOrjp7DZnQ==}
@@ -2868,6 +2877,8 @@ snapshots:
       unpipe: 1.0.0
 
   require-from-string@2.0.2: {}
+
+  ring-routine-sim@0.1.0: {}
 
   rollup@4.64.7:
     dependencies:

@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "@jirani/core": "workspace:*",
-    "ring-routine-sim": "workspace:*"
+    "ring-routine-sim": "0.1.0"
   }
 }

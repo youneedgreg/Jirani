@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "sim": "tsx packages/ring-routine-sim/src/cli.ts",
+    "sim": "ring-routine-sim",
     "webhook": "tsx services/webhook/src/server.ts",
     "mcp": "tsx services/agent/src/server.ts",
     "demo": "tsx services/mcp/src/demo.ts",
@@ -36,7 +36,7 @@
   "dependencies": {
     "@jirani/core": "workspace:*",
     "@jirani/ring": "workspace:*",
-    "ring-routine-sim": "workspace:*"
+    "ring-routine-sim": "0.1.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
