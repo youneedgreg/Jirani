@@ -14,14 +14,14 @@ const ev = (deviceId: string, type: string, extra: Partial<CoreEvent> = {}): Cor
 
 describe('describeEvent', () => {
   it('says what opened, and leaves out closings and passing cars', () => {
-    expect(describeEvent(h, ev(DEFAULT_DEVICES.bathroom, 'contact_sensor_opened'))).toBe('Bathroom door opened');
-    expect(describeEvent(h, ev(DEFAULT_DEVICES.fridge, 'contact_sensor_opened'))).toBe('Fridge opened');
-    expect(describeEvent(h, ev(DEFAULT_DEVICES.fridge, 'contact_sensor_closed'))).toBeNull();
+    expect(describeEvent(h, ev(DEFAULT_DEVICES.bathroom, 'contact_sensor_faulted'))).toBe('Bathroom door opened');
+    expect(describeEvent(h, ev(DEFAULT_DEVICES.fridge, 'contact_sensor_faulted'))).toBe('Fridge opened');
+    expect(describeEvent(h, ev(DEFAULT_DEVICES.fridge, 'contact_sensor_cleared'))).toBeNull();
     expect(describeEvent(h, ev(DEFAULT_DEVICES.doorbell, 'button_press'))).toBe('Doorbell pressed');
     expect(describeEvent(h, ev(DEFAULT_DEVICES.doorbell, 'motion_detected', { subType: 'human' }))).toBe('Someone at the front door');
     expect(describeEvent(h, ev(DEFAULT_DEVICES.doorbell, 'motion_detected', { subType: 'vehicle' }))).toBeNull();
     expect(describeEvent(h, ev(DEFAULT_DEVICES.fridge, 'device_offline'))).toBe('Fridge sensor went offline');
-    expect(describeEvent(h, ev('unknown-device', 'contact_sensor_opened'))).toBeNull();
+    expect(describeEvent(h, ev('unknown-device', 'contact_sensor_faulted'))).toBeNull();
   });
 });
 

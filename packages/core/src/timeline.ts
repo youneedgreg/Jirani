@@ -22,7 +22,7 @@ export function describeEvent(h: Household, e: CoreEvent): string | null {
   if (!role) return null;
   const thing = ROLE_WORDS[role];
   switch (e.type) {
-    case 'contact_sensor_opened':
+    case 'contact_sensor_faulted':
       return role === 'doorbell' ? null : `${capital(thing)} opened`;
     case 'button_press':
       return 'Doorbell pressed';

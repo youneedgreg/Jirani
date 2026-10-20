@@ -197,9 +197,11 @@ docs/                      aws.md, feedback.md, friction-log.md
 
 **Live and tested:** the rhythm engine, HMAC-verified Ring webhooks (1,024 signed events accepted on AWS, 0 rejected), the MCP server (called from the MCP Inspector against AWS), the Strands agent on Amazon Nova (English and Spanish), the AWS stack (DynamoDB, Lambda with Function URLs, EventBridge Scheduler, SES, Secrets Manager), real emails through SES, the family dashboard and voice client on Vercel behind Clerk sign-in, and the TV card on the web build against a local Jirani.
 
-**Not yet:** the Ring API client has only been tested against mocks (a Ring Developer Playground run is next), the TV card hasn't run on the Vega Virtual Device yet, and the dashboard's live-view page for `view_front_door` isn't built yet.
+**Ring API:** the Ring client was run against the real Ring API with a Ring Developer Playground token: devices (with `?include=`), status, capabilities, event history and the user endpoint all answered as expected.
 
-**Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in the Ring webhook v1.1 shape, signed exactly like Ring signs webhooks. Contact-sensor event names are an assumption until confirmed against Ring's docs.
+**Not yet:** the TV card hasn't run on the Vega Virtual Device yet, and the dashboard's live-view page for `view_front_door` isn't built yet.
+
+**Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in Ring's documented webhook v1.1 payload (event name in `data.type`, device in `attributes.source`, epoch-millisecond timestamps), signed exactly like Ring signs webhooks. Contact-sensor events use Ring's names, `contact_sensor_faulted` (opened) and `contact_sensor_cleared` (closed); Ring marks sensor support as Early Access, so they may still change.
 
 **Not a medical device.** Jirani describes changes in routine and suggests conversations. It does not diagnose anything and never contacts emergency services itself.
 

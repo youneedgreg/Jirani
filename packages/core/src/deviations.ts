@@ -91,7 +91,7 @@ export function offlineDevices(events: CoreEvent[], now: string): Map<string, st
 export function clearingActivity(h: Household, events: CoreEvent[], deviationId: string, now: string): CoreEvent | undefined {
   const nowMs = Date.parse(now);
   const opens = events
-    .filter((e) => e.type === 'contact_sensor_opened' && roleOf(h, e) && roleOf(h, e) !== 'doorbell' && Date.parse(e.at) <= nowMs)
+    .filter((e) => e.type === 'contact_sensor_faulted' && roleOf(h, e) && roleOf(h, e) !== 'doorbell' && Date.parse(e.at) <= nowMs)
     .sort((x, y) => x.at.localeCompare(y.at));
   const [kind, date, ...rest] = deviationId.split(':');
   if (kind === 'no_morning_activity') {
@@ -142,7 +142,7 @@ export function detect(input: DetectInput): DetectionResult {
   }
 
   const past = input.events.filter((e) => Date.parse(e.at) <= nowMs).sort((x, y) => x.at.localeCompare(y.at));
-  const opens = past.filter((e) => e.type === 'contact_sensor_opened' && roleOf(h, e) && roleOf(h, e) !== 'doorbell');
+  const opens = past.filter((e) => e.type === 'contact_sensor_faulted' && roleOf(h, e) && roleOf(h, e) !== 'doorbell');
   const todayOpens = opens
     .map((e) => ({ e, l: toLocal(h.timeZone, e.at), role: roleOf(h, e)! }))
     .filter((x) => x.l.date === local.date);
@@ -223,7 +223,7 @@ export function detect(input: DetectInput): DetectionResult {
       const role = roleOf(h, e);
       if (!role) continue;
       const meaningful =
-        e.type === 'contact_sensor_opened' || e.type === 'button_press' || (e.type === 'motion_detected' && e.subType === 'human');
+        e.type === 'contact_sensor_faulted' || e.type === 'button_press' || (e.type === 'motion_detected' && e.subType === 'human');
       if (!meaningful) continue;
       const l = toLocal(h.timeZone, e.at);
       if (role === 'bathroom' && l.hour < 6) continue; // night trips are normal
