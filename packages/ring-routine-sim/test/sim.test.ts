@@ -84,7 +84,11 @@ describe('Ring compatibility', () => {
     const body = JSON.stringify(toEnvelope(ev!));
     expect(verifySignature(body, sign(body, 'k'), 'k')).toBe(true);
     const n = normalise(parseWebhook(body));
-    expect(n).toMatchObject({ id: ev!.id, requestId: ev!.requestId, deviceId: ev!.deviceId, type: ev!.type });
+    expect(n).toMatchObject({ id: ev!.id, requestId: ev!.requestId, deviceId: ev!.deviceId, type: ev!.type, at: ev!.at });
+    // Ring's v1.1 shape: event name in data.type, device in attributes.source, epoch-ms timestamp.
+    const env = JSON.parse(body);
+    expect(env.meta).toMatchObject({ version: '1.1', account_id: expect.any(String) });
+    expect(env.data).toMatchObject({ type: ev!.type, attributes: { source: ev!.deviceId, source_type: 'devices', timestamp: Date.parse(ev!.at) } });
   });
 
   it('replay posts signed bodies and counts statuses', async () => {

@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 /**
- * Ring webhook v1.1 envelope, modelled on the public Ring Partner API docs.
+ * Ring webhook v1.1 envelope, as documented in the Ring Partner API docs
+ * (https://developer.amazon.com/docs/ring/api-documentation.html#webhook-v11-payload-structure
+ * and #sensor-events). Route on `data.type`, read the device from
+ * `data.attributes.source`; `timestamp` is Unix epoch milliseconds.
  *
- * VERIFY ON DAY 1: ask the Ring Appstore MCP server
- * (https://knowledge.appstore-mcp.ring.amazon.dev/mcp) for the exact v1.1 payload
- * and contact-sensor event shape, then tighten these schemas. Everything that
- * depends on field names lives in this file and `normalise()`, so a change is local.
+ * Sensor events are Early Access in Ring's docs, so names may change before GA.
+ * Everything that depends on field names lives in this file and `normalise()`.
  *
  * Unknown fields pass through so a newer payload never crashes the receiver.
  */
@@ -36,17 +37,19 @@ export const WebhookEnvelopeSchema = z
         version: z.string().optional(),
         request_id: z.string().min(1),
         time: z.string().optional(),
+        account_id: z.string().optional(),
       })
       .passthrough(),
     data: z
       .object({
-        type: z.string(),
+        type: z.string().min(1),
         id: z.string(),
         attributes: z
           .object({
-            event_type: z.string(),
-            device_id: z.string(),
-            timestamp: z.string(),
+            source: z.string().min(1),
+            source_type: z.string().optional(),
+            // Ring sends epoch milliseconds; accept an ISO string too, as Amazon's sample app does.
+            timestamp: z.union([z.number(), z.string()]),
             sub_type: z.string().optional(),
             component_ids: z.array(z.string()).optional(),
           })
@@ -78,8 +81,8 @@ export function normalise(envelope: WebhookEnvelope): HouseEvent {
   const ev: HouseEvent = {
     id: envelope.data.id,
     requestId: envelope.meta.request_id,
-    deviceId: a.device_id,
-    type: a.event_type,
+    deviceId: a.source,
+    type: envelope.data.type,
     at: new Date(a.timestamp).toISOString(),
   };
   if (a.sub_type) ev.subType = a.sub_type;
@@ -91,14 +94,15 @@ export function buildEnvelope(ev: HouseEvent): WebhookEnvelope {
   return {
     meta: { version: '1.1', request_id: ev.requestId, time: ev.at },
     data: {
-      type: 'events',
+      type: ev.type,
       id: ev.id,
       attributes: {
-        event_type: ev.type,
-        device_id: ev.deviceId,
-        timestamp: ev.at,
+        source: ev.deviceId,
+        source_type: 'devices',
+        timestamp: Date.parse(ev.at),
         ...(ev.subType ? { sub_type: ev.subType } : {}),
       },
+      relationships: { devices: { links: { self: `/v1/devices/${ev.deviceId}` } } },
     },
   };
 }

@@ -56,6 +56,59 @@ describe('webhook envelope', () => {
     expect(() => parseWebhook(JSON.stringify(env))).not.toThrow();
   });
 
+  it("parses Ring's documented contact-sensor payload", () => {
+    // From the Ring Partner API docs, "Sensor webhook payload" (placeholder IDs as published).
+    const body = JSON.stringify({
+      meta: {
+        version: '1.1',
+        time: '2026-03-10T14:22:20.258000314Z',
+        request_id: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-1773152538431-contact_senso',
+        account_id: 'ava1.ring.account.XXXXXXXX',
+      },
+      data: {
+        id: '<device_id>_<event_type>_<timestamp>',
+        type: 'contact_sensor_faulted',
+        attributes: { source: '<device_id>', source_type: 'devices', timestamp: 1773152538431 },
+        relationships: { devices: { links: { self: '/v1/devices/<device_id>' } } },
+      },
+    });
+    expect(normalise(parseWebhook(body))).toEqual({
+      id: '<device_id>_<event_type>_<timestamp>',
+      requestId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-1773152538431-contact_senso',
+      deviceId: '<device_id>',
+      type: 'contact_sensor_faulted',
+      at: '2026-03-10T14:22:18.431Z',
+    });
+  });
+
+  it("parses Ring's documented motion payload with sub_type and component_ids", () => {
+    const body = JSON.stringify({
+      meta: { version: '1.1', time: '2026-02-13T13:39:57.200155525Z', request_id: '2ad45ade-1818-4154-813b-afdd8bcd8085', account_id: 'ava1.ring.account.XXXYYY' },
+      data: {
+        id: '<device_id>_motion_<timestamp>',
+        type: 'motion_detected',
+        attributes: {
+          source: '<device_id>',
+          source_type: 'devices',
+          timestamp: 1786715596787,
+          timestamp_readable: '2026-08-14 08:53:16',
+          sub_type: 'motion',
+          component_ids: ['0'],
+        },
+        relationships: { devices: { links: { self: '/v1/devices/<device_id>' } } },
+      },
+    });
+    expect(normalise(parseWebhook(body))).toMatchObject({ type: 'motion_detected', subType: 'motion', deviceId: '<device_id>' });
+  });
+
+  it('rejects the old pre-v1.1 guess (event_type / device_id)', () => {
+    const body = JSON.stringify({
+      meta: { version: '1.1', request_id: 'r' },
+      data: { type: 'events', id: 'e', attributes: { event_type: 'motion_detected', device_id: 'd', timestamp: '2026-10-12T07:40:00.000Z' } },
+    });
+    expect(() => parseWebhook(body)).toThrow();
+  });
+
   it('rejects a payload without request_id', () => {
     const env = buildEnvelope(ev) as Record<string, any>;
     delete env.meta.request_id;
