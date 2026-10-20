@@ -81,7 +81,7 @@ pnpm demo
 
 No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would.
 
-- **Tests:** `pnpm test` (109 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`.
+- **Tests:** `pnpm test` (100 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`.
 - **Deploy your own:** `pnpm aws:deploy` (see [docs/aws.md](docs/aws.md)).
 - **Live family dashboard:** [jiraniamazon.vercel.app](https://jiraniamazon.vercel.app) is invite-only, because it shows household data and each spoken question is a paid Amazon Nova call. The video shows it.
 
@@ -170,7 +170,6 @@ They fit together: an assistant could use ring-vision-mcp for the cameras and Ji
 ```
 packages/core              rhythm baseline, deviations, context, escalation ladder, drift report (pure TS, no I/O)
 packages/ring              Ring Partner API client, webhook schemas, HMAC-SHA256 verification
-packages/ring-routine-sim  weeks of Ring-shaped household events + signed replay (published separately, MIT)
 services/webhook           framework-agnostic Ring webhook handler (Express locally, Lambda in AWS)
 services/mcp               MCP server, dashboard API, local runtime, the demo
 services/agent             Strands agent on Amazon Nova (Bedrock) that answers through the MCP server
@@ -178,6 +177,8 @@ services/aws               DynamoDB store + Lambda handlers (webhook, MCP/API, a
 infra/                     AWS CDK app: DynamoDB, Lambda + Function URLs, Bedrock access, EventBridge Scheduler, SES, Secrets Manager
 docs/                      aws.md, feedback.md, friction-log.md
 ```
+
+The event simulator isn't in this repo: Jirani installs [`ring-routine-sim`](https://www.npmjs.com/package/ring-routine-sim) from npm (pinned at 0.1.0), and its code and tests live in [its own repo](https://github.com/youneedgreg/ring-routine-sim).
 
 | Command | What it does |
 | --- | --- |
