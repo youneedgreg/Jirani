@@ -23,9 +23,11 @@ export const RING_EVENT_TYPES = [
   'app_integration_removed',
   'subscription_activated',
   'subscription_deactivated',
-  // Contact sensors (Ring Alarm). Shape to be confirmed against the Sensors docs.
-  'contact_sensor_opened',
-  'contact_sensor_closed',
+  // Contact sensors (Ring Alarm). Ring's naming: "faulted" = contact open, "cleared" = closed.
+  'contact_sensor_faulted',
+  'contact_sensor_cleared',
+  'tamper_detected',
+  'tamper_cleared',
 ] as const;
 
 export type RingEventType = (typeof RING_EVENT_TYPES)[number];

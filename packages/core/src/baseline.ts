@@ -42,7 +42,7 @@ export interface Baseline {
   daily: DayMetrics[];
 }
 
-const isOpen = (e: CoreEvent) => e.type === 'contact_sensor_opened';
+const isOpen = (e: CoreEvent) => e.type === 'contact_sensor_faulted';
 
 /**
  * Wake proxy. Night-time bathroom trips cluster too, so "two openings close

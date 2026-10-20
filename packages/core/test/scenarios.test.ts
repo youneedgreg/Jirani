@@ -119,7 +119,7 @@ describe('3. the front door at 3am is unusual', () => {
     const door: CoreEvent = {
       id: 'evt-3am',
       deviceId: DEFAULT_DEVICES.frontDoor,
-      type: 'contact_sensor_opened',
+      type: 'contact_sensor_faulted',
       at: at(day, '03:10'),
     };
     const now = at(day, '03:15');

@@ -42,7 +42,7 @@ export function summariseDay(
     .filter((x) => x.l.date === today && x.role)
     .sort((a, b) => a.e.at.localeCompare(b.e.at));
 
-  const opens = todays.filter((x) => x.e.type === 'contact_sensor_opened' && x.role !== 'doorbell');
+  const opens = todays.filter((x) => x.e.type === 'contact_sensor_faulted' && x.role !== 'doorbell');
   const morning = opens.filter((x) => x.l.minutes >= 300);
   const upAt = morning[0] ? hhmm(morning[0].l.minutes) : null;
   const fridge = opens.filter((x) => x.role === 'fridge');
