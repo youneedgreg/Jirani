@@ -108,16 +108,19 @@ Template:
 - Workaround: Scrolled the token out of view before taking screenshots; the token expires after 30 minutes.
 - Suggestion: Mask the token in the curl samples (`export TOKEN="<copy from above>"`) and add a "copy with token" button.
 
-### Installing the Vega SDK is heavy and the docs lag the sample
-- Date: 19 Oct 2026
-- Task: Prepare to run the Fire TV check-in card on the Vega Virtual Device on an Apple-silicon Mac.
+### Installing the Vega SDK is heavy, and the first setup needs manual fixes
+- Date: 19–20 Oct 2026
+- Task: Run the Fire TV check-in card on the Vega Virtual Device on an Apple-silicon Mac, against Jirani running on the Mac.
 - Steps:
-  1. Followed the Vega SDK install docs.
-  2. Compared them with the SDK version `react-native-multi-tv-app-sample` targets.
-- Expected vs actual: Expected a single installer. Actual: about 20 GB of free disk, a developer-portal sign-in to download, Rosetta plus eight Homebrew packages, telemetry on by default, and install docs marked open beta that cover 0.21 while the sample targets 0.24.
+  1. Followed the Vega SDK install docs and compared them with the SDK version `react-native-multi-tv-app-sample` targets.
+  2. Installed the prerequisites (Rosetta and eight Homebrew packages) and the Vega CLI 1.4.5, pointed SDK storage at an external drive and turned telemetry off.
+  3. Ran `vega sdk install --non-interactive`. The first download timed out on the network; a later retry was stopped, and its 688 MB partial file had to be deleted, because a download can't be resumed. The next attempt took about 13 minutes and installed SDK 0.24.12112 (5.4 GB).
+  4. Found that `~/vega/env`, written when the CLI was installed, had no `KEPLER_SDK_PATH`, and added it by hand.
+  5. Started the Virtual Device (`vega virtual-device start`, about 25 seconds), built the app (`build:vega:debug`), ran it (`vega run-app`), and let the device reach the Mac with `vega device start-port-forwarding --port 3333 --forward false`.
+- Expected vs actual: Expected a single installer and docs that match the sample. Actual: about 20 GB of free disk, a developer-portal sign-in, Rosetta plus eight Homebrew packages, telemetry on by default, install docs marked open beta that cover 0.21 while the sample targets 0.24, sample docs that still use the old `kepler` commands, a download with no resume, and an env file missing the SDK path. Once set up, building and running worked first time: the card appeared and "I'm OK" from the remote resolved the alert. The Virtual Device is a plain QEMU window, and I couldn't find a documented way to take a screenshot or send remote keys from a script, so every check was by hand.
 - Severity: major
-- Workaround: Planned the install on an external drive; kept the Android TV emulator as a fallback.
-- Suggestion: Ship one signed installer that checks prerequisites, asks before enabling telemetry, and keep the install docs in step with the version the samples use.
+- Workaround: Installed on an external drive, retried the download, added `KEPLER_SDK_PATH` to `~/vega/env` by hand, and checked the card by eye on the device.
+- Suggestion: Make SDK downloads resumable, write `KEPLER_SDK_PATH` when `vega sdk install` finishes, keep the install docs and the samples on the same version and the `vega` command names, ask before enabling telemetry, and add CLI commands to screenshot the Virtual Device and send remote keys.
 
 ### react-native-multi-tv-app-sample doesn't typecheck on a clean clone
 - Date: 19 Oct 2026
