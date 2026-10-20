@@ -72,6 +72,8 @@ The statistics engine (`packages/core`) is pure TypeScript with no I/O and no LL
 
 ## Judge quickstart
 
+Needs Node.js 20 or later and pnpm: run `corepack enable` (it fetches the pinned pnpm on first use), or `npm install -g pnpm` if your Node.js has no corepack.
+
 ```bash
 pnpm install
 pnpm demo
