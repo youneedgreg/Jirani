@@ -1,5 +1,10 @@
 # Jirani
 
+[![CI](https://github.com/youneedgreg/Jirani/actions/workflows/ci.yml/badge.svg)](https://github.com/youneedgreg/Jirani/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![MCP 2025-11-25](https://img.shields.io/badge/MCP-2025--11--25%20Streamable%20HTTP-6f42c1)
+![Amazon Nova on Bedrock](https://img.shields.io/badge/agent-Amazon%20Nova%20on%20Bedrock-ff9900)
+
 **The neighbour who notices.** *Jirani* is Swahili for neighbour.
 
 Jirani is a privacy-first caregiving agent for older adults who live alone. It learns a person's daily rhythm from Ring signals (door and contact sensors, doorbell motion and presses), never from video by default. When a day breaks pattern and nothing she told it explains why, Jirani asks **her** first, then a neighbour, then family with the evidence. A weekly report notices slow changes a timer never would.
@@ -8,19 +13,75 @@ Jirani is a privacy-first caregiving agent for older adults who live alone. It l
 
 Built for the [Amazon Developer Hackathon](https://amazonappdev2026.devpost.com/) (Ring track + Alexa+ track, AWS Builder and Open Source mini challenges).
 
-## Try it in one command
+<!-- GIF: 60-second walkthrough (dashboard, voice, TV card, MCP Inspector). Added after the F7 recordings. -->
+
+## Why
+
+- **63 million** Americans are family caregivers, about 1 in 4 adults ([AARP & National Alliance for Caregiving, *Caregiving in the US 2025*](https://www.aarp.org/press/releases/2025-07-24-new-report-reveals-crisis-point-for-americas-63-million-family-caregivers.html)). Many live far from the person they look after.
+- **Alexa Together**, Amazon's caregiving subscription, was discontinued in May 2025; Amazon now points families to Alexa Emergency Assist ([About Amazon](https://www.aboutamazon.com/news/devices/alexa-together-launches-to-help-customers-remotely-care-for-loved-ones)).
+- Timer alerts ("no activity by 10am") can't tell a lie-in or a weekend away from an emergency, and they miss changes that build up over weeks. Cameras feel like spying.
+
+Jirani's bet: learn *her* rhythm, remember what she said, ask her before anyone else, and report slow drift in plain words.
+
+## What it does
+
+The demo story, end to end (`pnpm demo` plays all of it):
+
+1. **No false alarm.** On Thursday Margaret tells Jirani she'll be at her sister's this weekend. On Sunday the house is silent, and nobody is bothered.
+2. **The ladder.** Monday 10:05, no morning activity and no plan explains it. Jirani checks in with Margaret by voice and on her TV, then asks Joe next door, then tells Amina with the evidence and (with Margaret's prior consent) the front-door camera. Joe finds her in the garden; everyone gets the all-clear.
+3. **Slow drift.** The weekly report notices night-time bathroom trips rising over three weeks and suggests a conversation with her doctor. It never diagnoses.
+4. **She stays in charge.** "Jirani, pause for two hours."
+
+<!-- SCREENSHOTS: Today page, Week page with the drift flag, /talk voice client, Fire TV check-in card. Added after F7a (clean demo data). -->
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Home["Margaret's home"]
+    Ring["Ring sensors + doorbell<br/>(simulated: ring-routine-sim)"]
+    TV["Fire TV check-in card"]
+  end
+
+  subgraph AWS["AWS (eu-north-1, CDK)"]
+    Webhook["Webhook Lambda<br/>HMAC-SHA256 verified"]
+    DB[("DynamoDB<br/>events, context, ladder")]
+    Engine["Rhythm engine<br/>baseline, deviations, drift<br/>(EventBridge Scheduler)"]
+    Ladder["Escalation ladder L0-L4"]
+    MCP["MCP server<br/>2025-11-25, Streamable HTTP<br/>10 tools"]
+    Agent["Strands agent<br/>Amazon Nova 2 Lite on Bedrock"]
+    SES["Amazon SES<br/>emails to Joe and Amina"]
+  end
+
+  subgraph Web["Vercel"]
+    Dash["Family dashboard + /talk voice client<br/>Next.js, Clerk sign-in"]
+  end
+
+  Ring -->|signed webhooks| Webhook --> DB
+  DB --> Engine --> Ladder
+  Ladder --> SES
+  TV -->|"reads state, answer_checkin"| MCP
+  MCP <--> DB
+  Agent -->|tools, by role| MCP
+  Dash -->|read API, token server-side| MCP
+  Dash -->|"/ask"| Agent
+  Alexa["Alexa+ / any MCP client"] --> MCP
+```
+
+The statistics engine (`packages/core`) is pure TypeScript with no I/O and no LLM. The agent can only reach Jirani through the MCP server, with the tools allowed for whoever is speaking.
+
+## Judge quickstart
 
 ```bash
 pnpm install
 pnpm demo
 ```
 
-No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would:
+No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would.
 
-1. **No false alarm.** Margaret tells Jirani she'll be at her sister's this weekend. On Sunday the house is silent, and nobody is bothered.
-2. **The ladder.** Monday 10:05, no morning activity and no plan explains it. Jirani checks in with Margaret, then asks Joe next door, then tells Amina with the evidence and (with Margaret's prior consent) the front-door camera. Joe finds her in the garden; everyone gets the all-clear.
-3. **Slow drift.** The weekly report notices night-time bathroom trips rising over three weeks and suggests a conversation with her doctor. It never diagnoses.
-4. **She stays in charge.** "Jirani, pause for two hours."
+- **Tests:** `pnpm test` (106 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`.
+- **Deploy your own:** `pnpm aws:deploy` (see [docs/aws.md](docs/aws.md)).
+- **Live family dashboard:** [jiraniamazon.vercel.app](https://jiraniamazon.vercel.app) is invite-only, because it shows household data and each spoken question is a paid Amazon Nova call. The video shows it.
 
 ## How it decides
 
@@ -32,7 +93,7 @@ No AWS account, Ring device or API keys needed. The demo starts the real server,
 | Long stillness | No activity at home during waking hours | max(1.25 × her 95th-percentile quiet spell, 3 h); not after leaving by the front door |
 | Slow drift | Last 7 lived-in days vs up to 21 days ending a week earlier (a guard week, so a slow rise isn't its own baseline); only days she was home for the morning count | ≥ 2.5 standard errors **and** a practical change (e.g. +1 night trip) |
 
-Context Margaret or Amina gives (`away`, `late_start`, `visitor_expected`) suppresses or shifts these, and every suppression keeps its reason so `why_alert` can explain it. A sensor that goes offline is a maintenance notice, never an emergency. Days she was away are never learned as "normal".
+Context Margaret or Amina gives (`away`, `late_start`, `visitor_expected`) suppresses or shifts these, and every suppression keeps its reason so `why_alert` can explain it. A sensor that goes offline is a maintenance notice, never an emergency. Days she was away are never learned as "normal". If late events show she was fine after all, the alert closes itself and says so.
 
 **Measured on simulated households** (`packages/core/test/scenarios.test.ts`, 40 seeds): the weekly report caught a three-week rise in night trips in 31 of 40 households, and flagged 0 of 40 steady routines.
 
@@ -46,9 +107,19 @@ Context Margaret or Amina gives (`away`, `late_start`, `visitor_expected`) suppr
 | 3 | Family, with the evidence; live view only if Margaret consented | family decides |
 | 4 | Suggest calling 911 with a summary ready | a human decides; Jirani never calls |
 
-## MCP server (Alexa+ track)
+## Surfaces
 
-Spec **2025-11-25**, **Streamable HTTP**, stateless (`POST /mcp`). Run it with `pnpm mcp`.
+### Family dashboard and voice client
+
+[youneedgreg/ring-api-helloworld](https://github.com/youneedgreg/ring-api-helloworld) (Next.js, on Vercel, Clerk sign-in with invite-only sign-up). Amina's phone-first view: **Today** (her day in plain words and a timeline), **Alerts** (every step of the ladder with times), **Week** (the drift report and four 4-week charts), **Messages** and **Plans**. **`/talk`** is a voice client for Margaret or family, in English or Spanish, that shows which MCP tools the agent called. The Jirani API token stays on the server.
+
+### Fire TV check-in card
+
+[youneedgreg/react-native-multi-tv-app-sample](https://github.com/youneedgreg/react-native-multi-tv-app-sample). A check-in card over whatever Margaret is watching: "I'm OK" resolves the alert, "Call Amina" asks family to call her (`answer_checkin` with `call_family`). English or Spanish, in the Expo app and the Vega app.
+
+### MCP server (Alexa+ track)
+
+Spec **2025-11-25**, **Streamable HTTP**, stateless (`POST /mcp`). Run it with `pnpm mcp`; the deployed one is checked with the MCP Inspector.
 
 | Tool | For | What it does |
 | --- | --- | --- |
@@ -63,14 +134,34 @@ Spec **2025-11-25**, **Streamable HTTP**, stateless (`POST /mcp`). Run it with `
 | `view_front_door` | Amina | Ring live view, only at Level 3+ and only with consent |
 | `usual_routine` | anyone | The learned baseline in plain words |
 
-## The agent (Amazon Bedrock)
+### The agent (Amazon Nova on Bedrock)
 
-A [Strands](https://strandsagents.com) agent on Amazon Bedrock (Amazon Nova 2 Lite) answers Margaret and Amina in a sentence or two. It can only reach Jirani through the MCP server above, and only with the tools allowed for whoever is speaking: Margaret's pause control isn't available to family, and the front-door camera isn't a tool on her side. It must cite what the tools returned, say "I don't know" otherwise, and never diagnose.
+A [Strands](https://strandsagents.com) agent on Amazon Bedrock (Amazon Nova 2 Lite, EU inference profile, temperature 0) answers Margaret and Amina in a sentence or two, in English or Spanish (`lang: "es"`). It can only reach Jirani through the MCP server above, and only with the tools allowed for whoever is speaking: Margaret's pause control isn't available to family, and the front-door camera isn't a tool on her side. It must cite what the tools returned, say "I don't know" otherwise, and never diagnose.
 
 ```bash
 pnpm ask "How's Mum this week?"                       # needs AWS credentials with Bedrock access
 pnpm ask --as resident "I'm at my sister's Saturday"
+pnpm ask --lang es "¿Cómo está mamá hoy?"
 ```
+
+## Built during the hackathon
+
+- **This repository** was started for the hackathon (first commit 15 Oct 2026): the rhythm engine, Ring client and webhook verification, simulator, MCP server, agent, AWS stack and tests.
+- **The family dashboard** is a fork of Amazon's [`ring-api-helloworld`](https://github.com/AmazonAppDev/ring-api-helloworld). Amazon's live-view sample is kept at `/sample`; the family pages, the `/talk` voice client and Clerk sign-in are ours (15 commits on top of the sample's 12, as of 20 Oct).
+- **The TV card** is added to Amazon's [`react-native-multi-tv-app-sample`](https://github.com/AmazonAppDev/react-native-multi-tv-app-sample); the TV app shell is Amazon's.
+- **[`ring-routine-sim`](https://github.com/youneedgreg/ring-routine-sim)** is new and open source (MIT): weeks of Ring-shaped household events with drift injection and HMAC-signed replay.
+
+## How Jirani compares
+
+| | Jirani | [ring-vision-mcp](https://github.com/SwaggyXO/ring-vision-mcp) | [ring-sandbox](https://github.com/josepha-mayo/ring-sandbox) |
+| --- | --- | --- | --- |
+| What it is | A care agent: learns a routine, decides when to worry, escalates | An MCP server over the Ring Partner API | A Python client and offline emulator of the Ring Partner API |
+| MCP tools are about | Margaret's day: plans, check-ins, alerts, drift | Devices: inventory, status, event history, live video | n/a (Python API) |
+| Video | Off by default; live view only at Level 3 with consent | Live video is a core tool | Media endpoints emulated |
+| Who decides | Statistics; the LLM only explains | The calling assistant | n/a |
+| Test data | `ring-routine-sim`: weeks of one household's routine with slow drift | Mock mode | Short scripted scenarios (a delivery, a home aide visit), pytest fixtures |
+
+They fit together: an assistant could use ring-vision-mcp for the cameras and Jirani for "is she OK?", and ring-sandbox and ring-routine-sim cover different kinds of test data.
 
 ## Repository
 
@@ -80,21 +171,21 @@ packages/ring              Ring Partner API client, webhook schemas, HMAC-SHA256
 packages/ring-routine-sim  weeks of Ring-shaped household events + signed replay (published separately, MIT)
 services/webhook           framework-agnostic Ring webhook handler (Express locally, Lambda in AWS)
 services/mcp               MCP server, dashboard API, local runtime, the demo
-services/agent             Strands agent on Bedrock that answers through the MCP server
-services/aws               DynamoDB store + Lambda handlers (webhook, MCP/API, agent, scheduled evaluation)
-infra/                     AWS CDK app: DynamoDB, Lambda + Function URLs, Bedrock access, EventBridge Scheduler, Secrets Manager
+services/agent             Strands agent on Amazon Nova (Bedrock) that answers through the MCP server
+services/aws               DynamoDB store + Lambda handlers (webhook, MCP/API, agent, scheduled evaluation, email)
+infra/                     AWS CDK app: DynamoDB, Lambda + Function URLs, Bedrock access, EventBridge Scheduler, SES, Secrets Manager
 docs/                      aws.md, feedback.md, friction-log.md
 ```
 
 | Command | What it does |
 | --- | --- |
 | `pnpm demo` | The whole story end to end |
-| `pnpm test` / `pnpm coverage` | Six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack |
-| `pnpm ask "<question>"` | Ask the Bedrock agent (`--as resident` for Margaret's side) |
-| `pnpm ddb:local` + `pnpm test:aws` | DynamoDB store and all three Lambda handlers, end to end on DynamoDB Local |
+| `pnpm test` / `pnpm coverage` | All tests / with coverage |
+| `pnpm ask "<question>"` | Ask the agent (`--as resident` for Margaret's side, `--lang es` for Spanish) |
+| `pnpm ddb:local` + `pnpm test:aws` | DynamoDB store and the Lambda handlers, end to end on DynamoDB Local |
 | `pnpm aws:deploy` / `pnpm aws:destroy` | Deploy to / remove from your AWS account (see [docs/aws.md](docs/aws.md)) |
 | `pnpm aws:story <thursday --plan\|sunday\|monday\|tuesday\|all>` | Play the demo story against the deployed stack, step by step (`--local` for `pnpm mcp`; see [docs/aws.md](docs/aws.md)) |
-| `pnpm mcp` | Local server: `/mcp`, `/ring/webhook`, the dashboard's read API `/api/state`, `/api/report`, `/api/timeline` (today's events in plain words), `/api/days` (28 days of rhythm for the chart), and the agent at `POST /ask` (calls Amazon Nova with your AWS credentials) |
+| `pnpm mcp` | Local server: `/mcp`, `/ring/webhook`, the dashboard's read API `/api/state`, `/api/report`, `/api/timeline`, `/api/days`, and the agent at `POST /ask` (calls Amazon Nova with your AWS credentials) |
 | `JIRANI_ALLOWED_HOSTS=10.0.2.2 JIRANI_CORS_ORIGINS=http://localhost:8082 pnpm mcp` | Same, reachable from an Android TV emulator and from the TV card's web build |
 | `pnpm sim presets` | List simulated households |
 | `pnpm sim generate --preset demo --out data/demo.ndjson` | Generate events |
@@ -102,7 +193,9 @@ docs/                      aws.md, feedback.md, friction-log.md
 
 ## Status
 
-Built during the hackathon submission window. Working today: the core engine, Ring webhook verification, the Ring API client, the simulator, the MCP server, the end-to-end demo, the AWS stack in CDK (DynamoDB, Lambda functions with Function URLs, EventBridge Scheduler, Secrets Manager), tested against DynamoDB Local, the Strands agent, tested with a scripted stand-in model, and email delivery through Amazon SES (escalation messages and a weekly report), tested with a fake sender. In progress: the first real deployment, Bedrock run and SES send, the family dashboard and voice client, the Fire TV check-in card, and live Ring Developer Playground integration.
+**Live and tested:** the rhythm engine, HMAC-verified Ring webhooks (1,024 signed events accepted on AWS, 0 rejected), the MCP server (called from the MCP Inspector against AWS), the Strands agent on Amazon Nova (English and Spanish), the AWS stack (DynamoDB, Lambda with Function URLs, EventBridge Scheduler, SES, Secrets Manager), real emails through SES, the family dashboard and voice client on Vercel behind Clerk sign-in, and the TV card on the web build against a local Jirani.
+
+**Not yet:** the Ring API client has only been tested against mocks (a Ring Developer Playground run is next), the TV card hasn't run on the Vega Virtual Device yet, and the dashboard's live-view page for `view_front_door` isn't built yet.
 
 **Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in the Ring webhook v1.1 shape, signed exactly like Ring signs webhooks. Contact-sensor event names are an assumption until confirmed against Ring's docs.
 
