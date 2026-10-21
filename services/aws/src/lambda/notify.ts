@@ -1,6 +1,7 @@
 import type { DynamoDBBatchResponse, DynamoDBStreamEvent } from 'aws-lambda';
 import { deliverOutboxItem, sesSender, type SendEmail } from '../notify.ts';
 import { documentClient, household, requireEnv } from '../config.ts';
+import { reportError, withSentry } from '../sentry.ts';
 
 /**
  * Emails each new outbox message (DynamoDB Stream, INSERTs of OUT# items only;
@@ -24,6 +25,7 @@ export function createNotifyHandler(send: SendEmail) {
         console.log(JSON.stringify({ SK, ...r }));
       } catch (err) {
         console.error(`delivery failed for ${SK}`, err);
+        reportError(err);
         if (record.dynamodb?.SequenceNumber) failures.push({ itemIdentifier: record.dynamodb.SequenceNumber });
       }
     }
@@ -31,4 +33,4 @@ export function createNotifyHandler(send: SendEmail) {
   };
 }
 
-export const handler = createNotifyHandler(sesSender(requireEnv('SENDER_EMAIL')));
+export const handler = withSentry(createNotifyHandler(sesSender(requireEnv('SENDER_EMAIL'))));

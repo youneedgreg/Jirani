@@ -77,6 +77,14 @@ describe('JiraniStack', () => {
     expect(ses).toHaveLength(2);
   });
 
+  it('passes a Sentry DSN to every function only when one is configured', () => {
+    expect(JSON.stringify(t.findResources('AWS::Lambda::Function'))).not.toContain('SENTRY_DSN');
+    const dsn = 'https://key@o1.ingest.de.sentry.io/1';
+    const fns = Object.values(synth({ sentryDsn: dsn }).findResources('AWS::Lambda::Function'));
+    expect(fns.length).toBeGreaterThan(0);
+    for (const f of fns) expect(f.Properties.Environment.Variables.SENTRY_DSN).toBe(dsn);
+  });
+
   it('creates no AWS Budgets resource (not available in eu-north-1 CloudFormation)', () => {
     t.resourceCountIs('AWS::Budgets::Budget', 0);
   });

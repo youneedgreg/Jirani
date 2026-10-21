@@ -10,6 +10,7 @@ import { JiraniStack } from '../lib/jirani-stack.ts';
  * cdk deploy -c region=<region>                 deploy elsewhere (only if your AWS account allows that Region)
  * cdk deploy -c senderEmail=jirani@you.com -c contactEmails=joe=a@x.com,amina=b@x.com -c dashboardUrl=https://...
  *                                              email escalation messages (SES) and the weekly report
+ * cdk deploy -c sentryDsn=https://...          report Lambda errors to Sentry
  */
 const app = new App();
 const ctx = (k: string): string | undefined => app.node.tryGetContext(k);
@@ -27,5 +28,6 @@ new JiraniStack(app, 'Jirani', {
   ...(ctx('senderEmail') ? { senderEmail: ctx('senderEmail')! } : {}),
   ...(ctx('contactEmails') ? { contactEmails: ctx('contactEmails')! } : {}),
   ...(ctx('dashboardUrl') ? { dashboardUrl: ctx('dashboardUrl')! } : {}),
+  ...(ctx('sentryDsn') ? { sentryDsn: ctx('sentryDsn')! } : {}),
   description: 'Jirani: privacy-first caregiving agent (Ring + Alexa+ hackathon entry)',
 });

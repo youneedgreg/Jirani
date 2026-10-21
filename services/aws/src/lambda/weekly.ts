@@ -2,6 +2,7 @@ import { weeklyReport } from '@jirani/core';
 import { DynamoStore } from '../dynamo-store.ts';
 import { sesSender, weeklyEmail, type SendEmail } from '../notify.ts';
 import { documentClient, household, requireEnv } from '../config.ts';
+import { withSentry } from '../sentry.ts';
 
 /** The weekly rhythm report, emailed to family (EventBridge Scheduler, once a week). */
 export function createWeeklyHandler(send: SendEmail) {
@@ -22,4 +23,4 @@ export function createWeeklyHandler(send: SendEmail) {
   };
 }
 
-export const handler = createWeeklyHandler(sesSender(requireEnv('SENDER_EMAIL')));
+export const handler = withSentry(createWeeklyHandler(sesSender(requireEnv('SENDER_EMAIL'))));

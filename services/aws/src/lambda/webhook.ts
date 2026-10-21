@@ -2,6 +2,7 @@ import type { LambdaFunctionURLEvent, LambdaFunctionURLResult } from 'aws-lambda
 import { handleRingWebhook } from '@jirani/webhook';
 import { recordRingEvent } from '../dynamo-store.ts';
 import { documentClient, household, requireEnv, ringHmacKey } from '../config.ts';
+import { withSentry } from '../sentry.ts';
 
 /**
  * Ring webhook receiver (Lambda Function URL, no IAM auth: Ring authenticates
@@ -12,7 +13,7 @@ import { documentClient, household, requireEnv, ringHmacKey } from '../config.ts
 const db = documentClient();
 const table = requireEnv('TABLE_NAME');
 
-export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunctionURLResult> {
+async function handle(event: LambdaFunctionURLEvent): Promise<LambdaFunctionURLResult> {
   if (event.requestContext.http.method !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ ok: false, error: 'method not allowed' }) };
   }
@@ -25,3 +26,5 @@ export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunc
   });
   return { statusCode: result.status, headers: { 'content-type': 'application/json' }, body: JSON.stringify(result.body) };
 }
+
+export const handler = withSentry(handle);

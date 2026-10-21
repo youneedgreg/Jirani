@@ -1,6 +1,7 @@
 import type { LambdaFunctionURLEvent, LambdaFunctionURLResult } from 'aws-lambda';
 import { answerAsk, ASK_BODY_ERROR, bedrockModel, type Model } from '@jirani/agent';
 import { apiToken, bearerMatches, requireEnv } from '../config.ts';
+import { withSentry } from '../sentry.ts';
 
 /**
  * Jirani's agent (Lambda Function URL): a Strands agent on Amazon Bedrock that
@@ -37,9 +38,11 @@ export function createAgentHandler(makeModel: () => Model) {
   };
 }
 
-export const handler = createAgentHandler(() =>
-  bedrockModel({
-    ...(process.env.BEDROCK_MODEL_ID ? { modelId: process.env.BEDROCK_MODEL_ID } : {}),
-    ...(process.env.AWS_REGION ? { region: process.env.AWS_REGION } : {}),
-  }),
+export const handler = withSentry(
+  createAgentHandler(() =>
+    bedrockModel({
+      ...(process.env.BEDROCK_MODEL_ID ? { modelId: process.env.BEDROCK_MODEL_ID } : {}),
+      ...(process.env.AWS_REGION ? { region: process.env.AWS_REGION } : {}),
+    }),
+  ),
 );
