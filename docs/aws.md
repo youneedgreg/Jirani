@@ -1,6 +1,6 @@
 # AWS integration (AWS Builder mini challenge)
 
-Jirani runs on AWS as four Lambda functions over one DynamoDB table, defined in
+Jirani runs on AWS as four Lambda functions (six with email) over one DynamoDB table, defined in
 AWS CDK (TypeScript) in [`infra/`](../infra). The core engine and the MCP tools are
 the same code that runs locally (`pnpm demo`); only the storage and the trigger change.
 
@@ -75,6 +75,7 @@ Options (append them directly, e.g. `pnpm aws:deploy -c demo=true`; with `--` in
 | `-c evaluateEveryMinutes=0` | Removes the schedule (nothing recurring left) |
 | `-c senderEmail=... -c contactEmails=... -c dashboardUrl=...` | Email escalation messages and the weekly report through SES (see Email below) |
 | `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `eu.amazon.nova-2-lite-v1:0`) |
+| `-c sentryDsn=https://...` | Report Lambda errors to Sentry (stack traces only; no request bodies, user data or model prompts) |
 | `-c region=<region>` | Deploy to another Region (default `eu-north-1`; a new-experience AWS project can only use its own Region) |
 
 The deploy prints `WebhookUrl`, `McpUrl`, `ApiUrl`, `AskUrl` and the two secret names. Read the secrets with:
@@ -203,25 +204,37 @@ them in `infra/cdk.context.json` (git-ignored, since it would hold personal emai
 
 ## Cost
 
-Rough, not measured yet. Bedrock is billed per token for each `/ask`; nothing calls it on a
-schedule. The only recurring work is the evaluation schedule (about
-43,000 Lambda invocations a month at one per minute), which should sit inside the Lambda
-and EventBridge Scheduler free tiers. DynamoDB on-demand reads for those evaluations
-should be cents a month at demo scale. The two Secrets Manager secrets are the main fixed
-cost, about $0.40 each per month, prorated. Replace these estimates with the real numbers
-from Cost Explorer after a few days. To stop all recurring work without destroying data:
+Measured with Cost Explorer for 1–21 October 2026: development, tests, about 65 Amazon Nova
+calls, and the stack running all month in eu-north-1 with the every-minute schedule on.
+**$0.23 in total**, all covered by AWS free-plan credits.
+
+| Service | 1–21 Oct 2026 |
+| --- | --- |
+| Amazon Bedrock (Amazon Nova 2 Lite) | $0.111 |
+| AWS Secrets Manager (2 secrets) | $0.096 |
+| Amazon DynamoDB (on-demand) | $0.024 |
+| Amazon SES | $0.001 |
+| Amazon S3 (CDK assets) | $0.001 |
+| AWS Lambda, EventBridge Scheduler, CloudWatch, KMS, CloudFormation | $0.00 |
+
+The every-minute evaluation (about 43,000 Lambda invocations a month) stayed inside the
+Lambda and EventBridge Scheduler free tiers. Secrets Manager is the main fixed cost, about
+$0.80 a month for the two secrets. Bedrock is billed per token for each `/ask` (under a
+fifth of a cent each) and nothing calls it on a schedule. Cost Explorer can lag by about a
+day. To stop all recurring work without destroying data:
 `pnpm aws:deploy -c evaluateEveryMinutes=0`.
 
 For a spending alert, create a budget in the AWS Billing console (Budgets → Create budget →
 monthly cost budget, e.g. $10, with an email alert). The stack can't create one itself:
 `AWS::Budgets::Budget` isn't a CloudFormation resource in eu-north-1, and including it fails
 the whole deploy. Budgets is a global service, so the console budget still covers the stack.
+This project's budget is $10 a month, with email alerts at 80% of actual spend and at 100% of forecast.
 
 ## Testing without AWS
 
 ```bash
 pnpm ddb:local    # in one terminal: DynamoDB Local in Docker
-pnpm test:aws     # the DynamoDB store and all three Lambda handlers, end to end
+pnpm test:aws     # the DynamoDB store and the Lambda handlers, end to end
 ```
 
 `services/aws/test/lambda.test.ts` serves the real handlers behind a Function-URL-shaped
