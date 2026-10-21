@@ -3,6 +3,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { buildMcpServer, clockInfo, dashboardDays, dashboardReport, dashboardState, dashboardTimeline, evaluateNow } from '@jirani/mcp';
 import { withStore, type DynamoStore } from '../dynamo-store.ts';
 import { apiToken, bearerMatches, documentClient, household, requireEnv } from '../config.ts';
+import { reportError, withSentry } from '../sentry.ts';
 
 /**
  * Jirani API (Lambda Function URL): the MCP server for Alexa+-style clients plus
@@ -55,7 +56,7 @@ async function handleMcp(event: LambdaFunctionURLEvent): Promise<LambdaFunctionU
   });
 }
 
-export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunctionURLResult> {
+async function handle(event: LambdaFunctionURLEvent): Promise<LambdaFunctionURLResult> {
   const method = event.requestContext.http.method;
   const path = event.rawPath;
 
@@ -91,6 +92,9 @@ export async function handler(event: LambdaFunctionURLEvent): Promise<LambdaFunc
     return json(404, { error: 'not found' });
   } catch (err) {
     console.error(err);
+    reportError(err);
     return json(500, { error: 'internal error' });
   }
 }
+
+export const handler = withSentry(handle);

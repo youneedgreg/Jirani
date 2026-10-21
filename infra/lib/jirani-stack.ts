@@ -32,6 +32,8 @@ export interface JiraniStackProps extends StackProps {
   contactEmails?: string;
   /** Dashboard link included in emails. */
   dashboardUrl?: string;
+  /** Sentry DSN for error reports from every function. Without it, nothing is sent to Sentry. */
+  sentryDsn?: string;
 }
 
 /**
@@ -80,7 +82,12 @@ export class JiraniStack extends Stack {
         architecture: lambda.Architecture.ARM_64,
         memorySize: opts.memorySize,
         timeout: opts.timeout,
-        environment: { TABLE_NAME: table.tableName, NODE_OPTIONS: '--enable-source-maps', ...opts.environment },
+        environment: {
+          TABLE_NAME: table.tableName,
+          NODE_OPTIONS: '--enable-source-maps',
+          ...(props.sentryDsn ? { SENTRY_DSN: props.sentryDsn } : {}),
+          ...opts.environment,
+        },
         logGroup: new logs.LogGroup(this, `${name}Logs`, {
           retention: logs.RetentionDays.ONE_WEEK,
           removalPolicy: RemovalPolicy.DESTROY,
