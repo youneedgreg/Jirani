@@ -341,7 +341,8 @@ export function buildMcpServer(store: Store): McpServer {
       const consent = h().consent.liveViewAtLevel3;
       if (!consent) return speak(`${h().residentName} hasn't agreed to camera access, so I can't open it.`, { allowed: false });
       if (open.length === 0) return speak('The camera is only available during a serious alert. Right now there isn\'t one.', { allowed: false });
-      const url = `${process.env.PUBLIC_WEB_URL ?? 'http://localhost:3000'}/live/front-door`;
+      // The dashboard's live-view page. DASHBOARD_URL is the deployed dashboard, the same link the emails use.
+      const url = new URL('/live/front-door', process.env.DASHBOARD_URL ?? 'http://localhost:3000').toString();
       return speak(`Opening the front-door camera. ${h().residentName} agreed to this for situations like now.`, {
         allowed: true,
         url,

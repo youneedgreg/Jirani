@@ -30,7 +30,7 @@ export interface JiraniStackProps extends StackProps {
   senderEmail?: string;
   /** Contact emails, "joe=a@example.com,amina=b@example.com" (in the SES sandbox these must be verified too). */
   contactEmails?: string;
-  /** Dashboard link included in emails. */
+  /** The family dashboard: linked from emails, and the camera link `view_front_door` returns. */
   dashboardUrl?: string;
   /** Sentry DSN for error reports from every function. Without it, nothing is sent to Sentry. */
   sentryDsn?: string;
@@ -119,7 +119,11 @@ export class JiraniStack extends Stack {
     const api = fn('ApiFn', 'api.ts', {
       memorySize: 512,
       timeout: Duration.seconds(30),
-      environment: { API_TOKEN_SECRET_ARN: apiToken.secretArn, JIRANI_DEMO: props.demo ? '1' : '0' },
+      environment: {
+        API_TOKEN_SECRET_ARN: apiToken.secretArn,
+        JIRANI_DEMO: props.demo ? '1' : '0',
+        ...(props.dashboardUrl ? { DASHBOARD_URL: props.dashboardUrl } : {}),
+      },
     });
     table.grantReadWriteData(api);
     apiToken.grantRead(api);

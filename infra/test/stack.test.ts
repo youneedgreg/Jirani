@@ -85,6 +85,15 @@ describe('JiraniStack', () => {
     for (const f of fns) expect(f.Properties.Environment.Variables.SENTRY_DSN).toBe(dsn);
   });
 
+  it('gives the API the dashboard URL for its camera link, only when one is configured', () => {
+    const apiEnv = (tpl: Template) =>
+      Object.values(tpl.findResources('AWS::Lambda::Function'))
+        .map((f) => f.Properties.Environment.Variables)
+        .find((v) => 'JIRANI_DEMO' in v);
+    expect(apiEnv(t)).not.toHaveProperty('DASHBOARD_URL');
+    expect(apiEnv(synth({ dashboardUrl: 'https://family.example' }))).toMatchObject({ DASHBOARD_URL: 'https://family.example' });
+  });
+
   it('creates no AWS Budgets resource (not available in eu-north-1 CloudFormation)', () => {
     t.resourceCountIs('AWS::Budgets::Budget', 0);
   });

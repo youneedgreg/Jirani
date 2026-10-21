@@ -73,7 +73,8 @@ Options (append them directly, e.g. `pnpm aws:deploy -c demo=true`; with `--` in
 | `-c demo=true` | Enables `POST /demo/clock` so the video can fast-forward time against the real stack |
 | `-c corsOrigins=https://jirani.app,http://localhost:3000` | Browser origins for the dashboard and voice client |
 | `-c evaluateEveryMinutes=0` | Removes the schedule (nothing recurring left) |
-| `-c senderEmail=... -c contactEmails=... -c dashboardUrl=...` | Email escalation messages and the weekly report through SES (see Email below) |
+| `-c senderEmail=... -c contactEmails=...` | Email escalation messages and the weekly report through SES (see Email below) |
+| `-c dashboardUrl=https://...` | The family dashboard: linked from the emails, and the front-door camera link that `view_front_door` returns (without it, `http://localhost:3000`) |
 | `-c bedrockModelId=<id>` | Bedrock model or inference profile for the agent (default `eu.amazon.nova-2-lite-v1:0`) |
 | `-c sentryDsn=https://...` | Report Lambda errors to Sentry (stack traces only; no request bodies, user data or model prompts) |
 | `-c region=<region>` | Deploy to another Region (default `eu-north-1`; a new-experience AWS project can only use its own Region) |
