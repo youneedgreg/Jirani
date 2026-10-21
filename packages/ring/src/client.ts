@@ -91,6 +91,23 @@ export class RingClient {
     return this.json(`/v1/devices/${encodeURIComponent(deviceId)}/capabilities`);
   }
 
+  /** On a chime: the audio slots and volume (read-only). */
+  getConfigurations(deviceId: string): Promise<JsonApiDocument> {
+    return this.json(`/v1/devices/${encodeURIComponent(deviceId)}/configurations`);
+  }
+
+  /**
+   * Play audio on a chime, named by an `audio_ref` read from its configurations.
+   * Needs the Chime Controls capability (Early Access). The response echoes the
+   * `audio_ref` as `data.id` with `status: "completed"`.
+   */
+  playChimeAudio(deviceId: string, audioRef: string): Promise<JsonApiDocument> {
+    return this.json(`/v1/devices/${encodeURIComponent(deviceId)}/media/audio/playback`, {
+      method: 'POST',
+      body: JSON.stringify({ data: { type: 'audio', attributes: { audio_ref: audioRef } } }),
+    });
+  }
+
   getEventHistory(deviceId: string): Promise<JsonApiDocument> {
     return this.json(`/v1/history/devices/${encodeURIComponent(deviceId)}/events`);
   }
