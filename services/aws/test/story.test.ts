@@ -40,7 +40,7 @@ describe('pnpm aws:story (local target)', () => {
     expect(store.outbox().some((m) => m.type === 'notify_contact')).toBe(false);
 
     const mon = await run('monday');
-    expect(mon.out).toMatch(/2026-10-19 10:05: checkin_resident→resident/);
+    expect(mon.out).toMatch(/2026-10-19 10:05: chime_resident→resident, checkin_resident→resident/);
     expect(mon.out).toMatch(/2026-10-19 10:26: notify_contact→joe/);
     expect(mon.out).toMatch(/2026-10-19 10:47: notify_contact→amina, offer_live_view→-/);
 

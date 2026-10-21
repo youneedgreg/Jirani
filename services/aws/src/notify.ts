@@ -43,6 +43,7 @@ export function recipientsFor(to: string, h: Household): string[] {
 }
 
 const SUBJECTS: Record<OutboxMessage['type'], (name: string) => string> = {
+  chime_resident: (n) => `Jirani: a soft tone for ${n}`,
   checkin_resident: (n) => `Jirani: checking in with ${n}`,
   notify_contact: (n) => `Jirani: please check on ${n}`,
   offer_live_view: (n) => `Jirani: front-door camera available for ${n}`,

@@ -255,6 +255,9 @@ export function buildMcpServer(store: Store): McpServer {
       };
       const did = (a: Escalation['history'][number]['actions'][number]) => {
         switch (a.type) {
+          case 'chime_resident':
+            // No runtime calls Ring's playback yet: there is no real Chime to try it on.
+            return `played a soft tone on ${name}'s Ring Chime (simulated: no real Chime is linked)`;
           case 'checkin_resident':
             return `asked ${name} by voice and on her TV whether she was alright`;
           case 'notify_contact':

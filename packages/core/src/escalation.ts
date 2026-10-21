@@ -6,7 +6,7 @@ import type { Contact, Household } from './types.ts';
  * (Lambda + EventBridge Scheduler, or the local demo) executes the actions.
  *
  *   0  logged         small deviation, nobody is told
- *   1  check-in       ask the resident herself (voice + TV)
+ *   1  check-in       a soft tone on her Chime (if she has one), then ask her (voice + TV)
  *   2  neighbour      ask a neighbour to knock
  *   3  family         family gets the evidence (+ live view only with consent)
  *   4  emergency      suggest calling emergency services; a human decides
@@ -15,6 +15,7 @@ export type Level = 0 | 1 | 2 | 3 | 4;
 
 export type ActionType =
   | 'log'
+  | 'chime_resident'
   | 'checkin_resident'
   | 'notify_contact'
   | 'offer_live_view'
@@ -79,7 +80,17 @@ export function openEscalation(d: Deviation, h: Household, now: string): Escalat
     ...base,
     level: 1,
     status: 'open',
-    history: [{ at: now, level: 1, actions: [checkin(h)] }],
+    history: [{ at: now, level: 1, actions: h.chime ? [chime(h), checkin(h)] : [checkin(h)] }],
+  };
+}
+
+/** The gentlest nudge: a tone she knows, before Jirani's voice asks anything. */
+function chime(h: Household): Action {
+  return {
+    type: 'chime_resident',
+    to: 'resident',
+    // Nothing plays it yet: there is no real Chime to try Ring's playback on.
+    message: `A soft tone on ${h.residentName}'s Ring Chime, just before the check-in (simulated: no real Chime is linked).`,
   };
 }
 

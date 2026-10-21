@@ -128,17 +128,18 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
     await replay(events.filter((e) => e.at > sunday && e.at <= monday), { url: webhookUrl, hmacKey: KEY });
     await setClock(monday);
     await evaluate();
-    expect((await outbox()).map((m) => `${m.type}:${m.to}`)).toEqual(['checkin_resident:resident']);
+    expect((await outbox()).map((m) => `${m.type}:${m.to}`)).toEqual(['chime_resident:resident', 'checkin_resident:resident']);
 
     // Running the scheduler again at the same minute sends nothing twice.
     await evaluate();
-    expect(await outbox()).toHaveLength(1);
+    expect(await outbox()).toHaveLength(2);
 
     await setClock(local('2026-10-19', '10:26'));
     await evaluate();
     await setClock(local('2026-10-19', '10:47'));
     await evaluate();
     expect((await outbox()).map((m) => `${m.type}:${m.to}`)).toEqual([
+      'chime_resident:resident',
       'checkin_resident:resident',
       'notify_contact:joe',
       'notify_contact:amina',
@@ -149,7 +150,7 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
     expect(why.text).toContain('No morning activity');
     // The ladder in order, with names, times and how each person was reached.
     expect(why.text).toMatch(
-      /At 10:05am Jirani asked Margaret by voice and on her TV.*At 10:26am Jirani messaged Joe \(her neighbour\)\..*so at 10:47am Jirani messaged Amina \(family\) and offered family a look at the front-door camera/,
+      /At 10:05am Jirani played a soft tone on Margaret's Ring Chime \(simulated: no real Chime is linked\) and asked Margaret by voice and on her TV.*At 10:26am Jirani messaged Joe \(her neighbour\)\..*so at 10:47am Jirani messaged Amina \(family\) and offered family a look at the front-door camera/,
     );
     expect(why.text).toContain('Still open: nobody has confirmed Margaret is OK yet.');
 
