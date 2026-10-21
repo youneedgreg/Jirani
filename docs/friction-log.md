@@ -132,3 +132,15 @@ Template:
 - Severity: minor
 - Workaround: Verified changes by bundling (`expo export`, the Vega bundle) and running the app instead of `tsc`.
 - Suggestion: Add a CI job that runs `tsc` on the sample's `main` and fix the module resolution for `shared-ui`.
+
+### Ring's WHEP docs and sample don't match what the live-view API does
+- Date: 21 Oct 2026
+- Task: Open the Ring live view from Jirani's dashboard with a Playground token, and close each session properly.
+- Steps:
+  1. Read "WHEP Live Video Streaming" in the Ring Partner API docs and the live-view hook in Amazon's `ring-api-helloworld` sample (`app/hooks/useWebRTCStream.ts`).
+  2. Sent a video-only, `recvonly` offer to `POST /v1/devices/{id}/media/streaming/whep/sessions`: 201 with an SDP answer, and the simulated stream played.
+  3. Closed the session with `DELETE` on the URL from the `Location` header, after checking that it was a Ring WHEP session URL.
+- Expected vs actual: Expected the `Location` URL the docs show (`.../whep/sessions/{session_id}`). Actual: it ends in `?location=ava1.ring.whep.location...`, so the strict URL check refused it and the first session ran until Ring's time limit. Separately, the sample adds its audio track as `sendrecv`, while the docs say every track must be `recvonly` (I didn't test whether Ring rejects that).
+- Severity: minor
+- Workaround: Allowed exactly one `location` query parameter on Ring's session URLs; the dashboard asks for video only, `recvonly`.
+- Suggestion: Show the full `Location` value, including `?location=`, in the WHEP docs, and make the sample's audio track `recvonly`.

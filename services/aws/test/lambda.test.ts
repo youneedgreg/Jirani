@@ -38,8 +38,12 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
   const setClock = (iso: string) => api('/demo/clock', { method: 'POST', body: JSON.stringify({ now: iso }) });
   const outbox = async () => ((await (await api('/api/state')).json()) as { outbox: { type: string; to: string }[] }).outbox;
   const call = async (name: string, args: Record<string, unknown> = {}) => {
-    const r = (await client.callTool({ name, arguments: args })) as { content: { text?: string }[]; isError?: boolean };
-    return { text: r.content.map((p) => p.text ?? '').join(' '), isError: r.isError };
+    const r = (await client.callTool({ name, arguments: args })) as {
+      content: { text?: string }[];
+      structuredContent?: Record<string, unknown>;
+      isError?: boolean;
+    };
+    return { text: r.content.map((p) => p.text ?? '').join(' '), data: r.structuredContent, isError: r.isError };
   };
 
   beforeAll(async () => {
@@ -153,6 +157,15 @@ describe.skipIf(!endpoint)('Lambda handlers (DynamoDB Local)', () => {
       /At 10:05am Jirani played a soft tone on Margaret's Ring Chime \(simulated: no real Chime is linked\) and asked Margaret by voice and on her TV.*At 10:26am Jirani messaged Joe \(her neighbour\)\..*so at 10:47am Jirani messaged Amina \(family\) and offered family a look at the front-door camera/,
     );
     expect(why.text).toContain('Still open: nobody has confirmed Margaret is OK yet.');
+
+    // Level 3 with her consent: the camera link points at the dashboard, never at localhost on AWS.
+    expect((await call('view_front_door')).data).toMatchObject({ allowed: true, url: 'http://localhost:3000/live/front-door' });
+    process.env.DASHBOARD_URL = 'https://family.example';
+    try {
+      expect((await call('view_front_door')).data).toMatchObject({ allowed: true, url: 'https://family.example/live/front-door' });
+    } finally {
+      delete process.env.DASHBOARD_URL;
+    }
 
     await setClock(local('2026-10-19', '10:52'));
     const ok = await call('answer_checkin', { from: 'contact', contact_id: 'joe', outcome: 'ok', note: "She's in the garden" });

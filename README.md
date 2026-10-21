@@ -82,7 +82,7 @@ pnpm demo
 
 No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would.
 
-- **Tests:** `pnpm test` (112 tests: the six roadmap scenarios, ladder, drift statistics, webhook, Ring client and chime, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`. `pnpm coverage` measures `packages/` and `services/` together, and CI uploads it to Codecov (the badge above). Codecov's percentage is lower than vitest's line count because it counts a partly covered branch as a miss.
+- **Tests:** `pnpm test` (113 tests: the six roadmap scenarios, ladder, drift statistics, webhook, Ring client and chime, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`. `pnpm coverage` measures `packages/` and `services/` together, and CI uploads it to Codecov (the badge above). Codecov's percentage is lower than vitest's line count because it counts a partly covered branch as a miss.
 - **Deploy your own:** `pnpm aws:deploy` (see [docs/aws.md](docs/aws.md)).
 - **Live family dashboard:** [jiraniamazon.vercel.app](https://jiraniamazon.vercel.app) is invite-only, because it shows household data and each spoken question is a paid Amazon Nova call. The video shows it.
 
@@ -114,7 +114,7 @@ Context Margaret or Amina gives (`away`, `late_start`, `visitor_expected`) suppr
 
 ### Family dashboard and voice client
 
-[youneedgreg/ring-api-helloworld](https://github.com/youneedgreg/ring-api-helloworld) (Next.js, on Vercel, Clerk sign-in with invite-only sign-up). Amina's phone-first view: **Today** (her day in plain words and a timeline), **Alerts** (every step of the ladder with times), **Week** (the drift report and four 4-week charts), **Messages** and **Plans**. **`/talk`** is a voice client for Margaret or family, in English or Spanish, that shows which MCP tools the agent called. The Jirani API token stays on the server.
+[youneedgreg/ring-api-helloworld](https://github.com/youneedgreg/ring-api-helloworld) (Next.js, on Vercel, Clerk sign-in with invite-only sign-up). Amina's phone-first view: **Today** (her day in plain words and a timeline), **Alerts** (every step of the ladder with times), **Week** (the drift report and four 4-week charts), **Messages** and **Plans**. **`/talk`** is a voice client for Margaret or family, in English or Spanish, that shows which MCP tools the agent called. **Front door** (`/live/front-door`, linked from an open Level 3 alert) opens the Ring live view only during a Level 3+ alert and only with Margaret's prior consent; without a Ring token, as on the public site, it plays a labelled replay of the Ring Developer Playground's simulated stream. The Jirani API token and the Ring token stay on the server.
 
 ### Fire TV check-in card
 
@@ -199,9 +199,9 @@ The event simulator isn't in this repo: Jirani installs [`ring-routine-sim`](htt
 
 **Live and tested:** the rhythm engine, HMAC-verified Ring webhooks (1,024 signed events accepted on AWS, 0 rejected, before the switch to Ring's documented v1.1 payload; the same 1,024 accepted locally after it), the MCP server (called from the MCP Inspector against AWS), the Strands agent on Amazon Nova (English and Spanish), the AWS stack (DynamoDB, Lambda with Function URLs, EventBridge Scheduler, SES, Secrets Manager), real emails through SES, the family dashboard and voice client on Vercel behind Clerk sign-in, and the TV card against a local Jirani on the Vega Virtual Device ("I'm OK" resolves the alert) and on the web build (both buttons).
 
-**Ring API:** the Ring client was run against the real Ring API with a Ring Developer Playground token: devices (with `?include=`), status, capabilities, event history and the user endpoint all answered as expected.
+**Ring API:** the Ring client was run against the real Ring API with a Ring Developer Playground token: devices (with `?include=`), status, capabilities, event history and the user endpoint all answered as expected. The dashboard's live view (WHEP) was run against the Playground too: the simulated stream played at 1280×720, closed itself before Ring's 30-second limit, and Ring confirmed each close.
 
-**Not yet:** the dashboard's live-view page for `view_front_door` isn't built yet.
+**Not yet:** the public site shows the front door as a labelled replay, because Ring Developer Playground tokens last only 30 minutes.
 
 **Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in Ring's documented webhook v1.1 payload (event name in `data.type`, device in `attributes.source`, epoch-millisecond timestamps), signed exactly like Ring signs webhooks. Contact-sensor events use Ring's names, `contact_sensor_faulted` (opened) and `contact_sensor_cleared` (closed); Ring marks sensor support as Early Access, so they may still change.
 
