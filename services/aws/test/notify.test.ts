@@ -126,6 +126,8 @@ describe.skipIf(!endpoint)('outbox delivery (DynamoDB Local)', () => {
   it('skips messages meant for the resident herself', async () => {
     const [key] = await deliverViaStore(msg('resident', 'checkin_resident'));
     expect(await deliverOutboxItem({ db, table, send, household: h }, key!)).toMatchObject({ status: 'skipped' });
+    const [tone] = await deliverViaStore(msg('resident', 'chime_resident'));
+    expect(await deliverOutboxItem({ db, table, send, household: h }, tone!)).toMatchObject({ status: 'skipped' });
   });
 
   it('stream handler: ignores other items, reports only the failed record for retry', async () => {

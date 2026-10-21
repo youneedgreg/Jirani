@@ -23,6 +23,22 @@ describe('escalation ladder', () => {
     expect(e.level).toBe(0);
   });
 
+  it('asks her first, with no tone when the home has no Chime', () => {
+    const e = openEscalation(high, h, t0);
+    expect(e.history[0]!.actions.map((a) => a.type)).toEqual(['checkin_resident']);
+  });
+
+  it('plays a soft tone on her Chime just before the check-in, and nobody else hears of it', () => {
+    const withChime = { ...h, chime: { deviceId: 'ava1.ring.device.chime', slotEvent: 'ring-appstore-event-1' } };
+    const e = openEscalation(high, withChime, t0);
+    expect(e.level).toBe(1);
+    expect(e.history[0]!.actions.map((a) => `${a.type}→${a.to}`)).toEqual(['chime_resident→resident', 'checkin_resident→resident']);
+    expect(e.history[0]!.actions[0]!.message).toContain('(simulated: no real Chime is linked)');
+    // Same timings as without a Chime: the tone adds no wait and asks no one sooner.
+    expect(tick(e, withChime, plus(19)).level).toBe(1);
+    expect(tick(e, withChime, plus(20)).level).toBe(2);
+  });
+
   it('does not move before the wait is over', () => {
     const e = openEscalation(high, h, t0);
     expect(tick(e, h, plus(19)).level).toBe(1);

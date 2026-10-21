@@ -22,6 +22,8 @@ export function demoHousehold(): Household {
       { id: 'joe', name: 'Joe', relation: 'neighbour', priority: 1, email: 'joe@example.com' },
       { id: 'amina', name: 'Amina', relation: 'family', priority: 1, email: 'amina@example.com' },
     ],
+    // Made up: ring-routine-sim has no chime, and Jirani has never played a real one.
+    chime: { deviceId: 'ava1.ring.device.chime', slotEvent: 'ring-appstore-event-1' },
     consent: { liveViewAtLevel3: true },
   };
 }

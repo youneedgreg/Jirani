@@ -9,6 +9,12 @@ export interface Household {
   /** deviceId -> role */
   devices: Record<string, Role>;
   contacts: Contact[];
+  /**
+   * A Ring Chime for a soft tone just before the check-in. `slotEvent` names one of
+   * the app's audio slots (e.g. "ring-appstore-event-1"); its audio_ref is looked up
+   * at play time, never stored. Absent when the home has no Chime.
+   */
+  chime?: { deviceId: string; slotEvent: string };
   /** Margaret's own choices. Jirani never overrides these. */
   consent: {
     /** May family open the front-door live view at Level 3? */

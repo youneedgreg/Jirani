@@ -29,7 +29,7 @@ Jirani's bet: learn *her* rhythm, remember what she said, ask her before anyone 
 The demo story, end to end (`pnpm demo` plays all of it):
 
 1. **No false alarm.** On Thursday Margaret tells Jirani she'll be at her sister's this weekend. On Sunday the house is silent, and nobody is bothered.
-2. **The ladder.** Monday 10:05, no morning activity and no plan explains it. Jirani checks in with Margaret by voice and on her TV, then asks Joe next door, then tells Amina with the evidence and (with Margaret's prior consent) the front-door camera. Joe finds her in the garden; everyone gets the all-clear.
+2. **The ladder.** Monday 10:05, no morning activity and no plan explains it. Jirani plays a soft tone on her Ring Chime (simulated), checks in with Margaret by voice and on her TV, then asks Joe next door, then tells Amina with the evidence and (with Margaret's prior consent) the front-door camera. Joe finds her in the garden; everyone gets the all-clear.
 3. **Slow drift.** The weekly report notices night-time bathroom trips rising over three weeks and suggests a conversation with her doctor. It never diagnoses.
 4. **She stays in charge.** "Jirani, pause for two hours."
 
@@ -82,7 +82,7 @@ pnpm demo
 
 No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would.
 
-- **Tests:** `pnpm test` (100 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`. `pnpm coverage` measures `packages/` and `services/` together, and CI uploads it to Codecov (the badge above). Codecov's percentage is lower than vitest's line count because it counts a partly covered branch as a miss.
+- **Tests:** `pnpm test` (112 tests: the six roadmap scenarios, ladder, drift statistics, webhook, Ring client and chime, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`. `pnpm coverage` measures `packages/` and `services/` together, and CI uploads it to Codecov (the badge above). Codecov's percentage is lower than vitest's line count because it counts a partly covered branch as a miss.
 - **Deploy your own:** `pnpm aws:deploy` (see [docs/aws.md](docs/aws.md)).
 - **Live family dashboard:** [jiraniamazon.vercel.app](https://jiraniamazon.vercel.app) is invite-only, because it shows household data and each spoken question is a paid Amazon Nova call. The video shows it.
 
@@ -105,7 +105,7 @@ Context Margaret or Amina gives (`away`, `late_start`, `visitor_expected`) suppr
 | Level | Who | Waits |
 | --- | --- | --- |
 | 0 | Logged only (small deviations) | n/a |
-| 1 | Margaret: voice check-in + Fire TV card | 20 min |
+| 1 | Margaret: a soft Ring Chime tone (simulated), then a voice check-in + Fire TV card | 20 min |
 | 2 | Neighbour: "Could you knock?" | 20 min |
 | 3 | Family, with the evidence; live view only if Margaret consented | family decides |
 | 4 | Suggest calling 911 with a summary ready | a human decides; Jirani never calls |
@@ -204,6 +204,8 @@ The event simulator isn't in this repo: Jirani installs [`ring-routine-sim`](htt
 **Not yet:** the dashboard's live-view page for `view_front_door` isn't built yet.
 
 **Ring data honesty:** the Ring Developer Playground provides simulated live-view streams but no motion, doorbell or sensor events, so event data in this repo comes from `ring-routine-sim`, in Ring's documented webhook v1.1 payload (event name in `data.type`, device in `attributes.source`, epoch-millisecond timestamps), signed exactly like Ring signs webhooks. Contact-sensor events use Ring's names, `contact_sensor_faulted` (opened) and `contact_sensor_cleared` (closed); Ring marks sensor support as Early Access, so they may still change.
+
+**Ring Chime: not tried on a real Chime.** Level 1 starts with a soft tone on Margaret's Chime, and the Ring client implements Ring's documented recipe for it (status, then the slot's `audio_ref` from configurations, then `POST /v1/devices/{id}/media/audio/playback`), skipping a chime that is offline or that she has snoozed. Without a real Chime that call is unreachable rather than merely unverified (the Playground has none), and Chime Controls is Early Access, so it is tested only against Ring's documented example responses (`packages/ring/test/chime.test.ts`). Nothing calls it at runtime: the demo, the dashboard's Messages page and `why_alert` all say "simulated: no real Chime is linked".
 
 **Not a medical device.** Jirani describes changes in routine and suggests conversations. It does not diagnose anything and never contacts emergency services itself.
 
