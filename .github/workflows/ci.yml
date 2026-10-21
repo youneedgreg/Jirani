@@ -15,7 +15,7 @@ jobs:
         ports: ['8000:8000']
     env:
       DYNAMODB_ENDPOINT: http://localhost:8000
-      # Codecov is free for students (GitHub Student Pack). Add CODECOV_TOKEN to repo secrets to enable uploads.
+      # Coverage goes to Codecov when the CODECOV_TOKEN repo secret is set (it is on youneedgreg/Jirani).
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm coverage
-      - name: CDK synth (bundles all three Lambda functions)
+      - name: CDK synth (bundles all six Lambda functions)
         run: pnpm aws:synth
       - name: End-to-end demo (webhook + rhythm engine + MCP server)
         run: pnpm demo
