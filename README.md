@@ -82,7 +82,7 @@ pnpm demo
 
 No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would.
 
-- **Tests:** `pnpm test` (100 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`. `pnpm coverage` measures `packages/` and `services/` together (about 83% of lines); CI uploads it to Codecov.
+- **Tests:** `pnpm test` (100 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`. `pnpm coverage` measures `packages/` and `services/` together, and CI uploads it to Codecov (the badge above). Codecov's percentage is lower than vitest's line count because it counts a partly covered branch as a miss.
 - **Deploy your own:** `pnpm aws:deploy` (see [docs/aws.md](docs/aws.md)).
 - **Live family dashboard:** [jiraniamazon.vercel.app](https://jiraniamazon.vercel.app) is invite-only, because it shows household data and each spoken question is a paid Amazon Nova call. The video shows it.
 
