@@ -14,7 +14,9 @@ Jirani is a privacy-first caregiving agent for older adults who live alone. It l
 
 Built for the [Amazon Developer Hackathon](https://amazonappdev2026.devpost.com/) (Ring track + Alexa+ track, AWS Builder and Open Source mini challenges).
 
-<!-- GIF: 60-second walkthrough (dashboard, voice, TV card, MCP Inspector). Added after the F7 recordings. -->
+<p align="center">
+  <img src="docs/media/story.gif" width="480" alt="25-second walkthrough of the demo story: a quiet Sunday with no alert, Monday's level 3 alert and its ladder, the Fire TV check-in card, the front-door replay, Joe's all-clear, the weekly drift chart and a voice answer from Amazon Nova">
+</p>
 
 ## Why
 
