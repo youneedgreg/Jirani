@@ -1,6 +1,7 @@
 # Jirani
 
 [![CI](https://github.com/youneedgreg/Jirani/actions/workflows/ci.yml/badge.svg)](https://github.com/youneedgreg/Jirani/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/youneedgreg/Jirani/branch/main/graph/badge.svg)](https://codecov.io/gh/youneedgreg/Jirani)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![MCP 2025-11-25](https://img.shields.io/badge/MCP-2025--11--25%20Streamable%20HTTP-6f42c1)
 ![Amazon Nova on Bedrock](https://img.shields.io/badge/agent-Amazon%20Nova%20on%20Bedrock-ff9900)
@@ -81,7 +82,7 @@ pnpm demo
 
 No AWS account, Ring device or API keys needed. The demo starts the real server, replays four weeks of signed Ring-shaped events through the real webhook (HMAC-verified), and drives the real MCP server over Streamable HTTP with an MCP client, the way an Alexa+ experience would.
 
-- **Tests:** `pnpm test` (100 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`.
+- **Tests:** `pnpm test` (100 tests: the six roadmap scenarios, ladder, drift statistics, webhook, MCP, agent wiring, CDK stack). 17 of them need DynamoDB Local and are skipped without it: run `pnpm ddb:local` and set `DYNAMODB_ENDPOINT=http://localhost:8000`. `pnpm coverage` measures `packages/` and `services/` together (about 83% of lines); CI uploads it to Codecov.
 - **Deploy your own:** `pnpm aws:deploy` (see [docs/aws.md](docs/aws.md)).
 - **Live family dashboard:** [jiraniamazon.vercel.app](https://jiraniamazon.vercel.app) is invite-only, because it shows household data and each spoken question is a paid Amazon Nova call. The video shows it.
 
