@@ -35,7 +35,14 @@ The demo story, end to end (`pnpm demo` plays all of it):
 3. **Slow drift.** The weekly report notices night-time bathroom trips rising over three weeks and suggests a conversation with her doctor. It never diagnoses.
 4. **She stays in charge.** "Jirani, pause for two hours."
 
-<!-- SCREENSHOTS: Today page, Week page with the drift flag, /talk voice client, Fire TV check-in card. Added after F7a (clean demo data). -->
+| Today: the open alert | Week: the drift flag | `/talk`: Amina asks |
+|---|---|---|
+| <img src="docs/media/today.png" width="260" alt="Today page on Monday 10:47: no morning activity yet, alert open at level 3"> | <img src="docs/media/week.png" width="260" alt="Week page flagging night-time bathroom trips, with a bar chart of the last four weeks"> | <img src="docs/media/talk.png" width="260" alt="Voice client answering how Margaret's week was, with the weekly_report MCP tool call shown"> |
+
+<p align="center">
+  <img src="docs/media/tv-checkin.png" width="640" alt="Fire TV check-in card: Good morning Margaret, it's Jirani, with I'm OK and Call Amina buttons">
+  <br><sub>Margaret's check-in card, answered with the remote (the TV app's web build is shown). All screens are from the demo story with simulated Ring events.</sub>
+</p>
 
 ## Architecture
 
