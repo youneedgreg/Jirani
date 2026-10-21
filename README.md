@@ -197,7 +197,7 @@ The event simulator isn't in this repo: Jirani installs [`ring-routine-sim`](htt
 
 ## Status
 
-**Live and tested:** the rhythm engine, HMAC-verified Ring webhooks (1,024 signed events accepted on AWS, 0 rejected, before the switch to Ring's documented v1.1 payload; the same 1,024 accepted locally after it), the MCP server (called from the MCP Inspector against AWS), the Strands agent on Amazon Nova (English and Spanish), the AWS stack (DynamoDB, Lambda with Function URLs, EventBridge Scheduler, SES, Secrets Manager), real emails through SES, the family dashboard and voice client on Vercel behind Clerk sign-in, and the TV card against a local Jirani on the Vega Virtual Device ("I'm OK" resolves the alert) and on the web build (both buttons).
+**Live and tested:** the rhythm engine, HMAC-verified Ring webhooks (1,024 signed events in Ring's documented v1.1 payload accepted on AWS, 0 rejected), the MCP server (called from the MCP Inspector against AWS), the Strands agent on Amazon Nova (English and Spanish), the AWS stack (DynamoDB, Lambda with Function URLs, EventBridge Scheduler, SES, Secrets Manager), real emails through SES, the family dashboard and voice client on Vercel behind Clerk sign-in, and the TV card against a local Jirani on the Vega Virtual Device ("I'm OK" resolves the alert) and on the web build (both buttons).
 
 **Ring API:** the Ring client was run against the real Ring API with a Ring Developer Playground token: devices (with `?include=`), status, capabilities, event history and the user endpoint all answered as expected. The dashboard's live view (WHEP) was run against the Playground too: the simulated stream played at 1280×720, closed itself before Ring's 30-second limit, and Ring confirmed each close.
 
