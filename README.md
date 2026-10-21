@@ -14,7 +14,9 @@ Jirani is a privacy-first caregiving agent for older adults who live alone. It l
 
 Built for the [Amazon Developer Hackathon](https://amazonappdev2026.devpost.com/) (Ring track + Alexa+ track, AWS Builder and Open Source mini challenges).
 
-<!-- GIF: 60-second walkthrough (dashboard, voice, TV card, MCP Inspector). Added after the F7 recordings. -->
+<p align="center">
+  <img src="docs/media/story.gif" width="480" alt="25-second walkthrough of the demo story: a quiet Sunday with no alert, Monday's level 3 alert and its ladder, the Fire TV check-in card, the front-door replay, Joe's all-clear, the weekly drift chart and a voice answer from Amazon Nova">
+</p>
 
 ## Why
 
@@ -33,7 +35,14 @@ The demo story, end to end (`pnpm demo` plays all of it):
 3. **Slow drift.** The weekly report notices night-time bathroom trips rising over three weeks and suggests a conversation with her doctor. It never diagnoses.
 4. **She stays in charge.** "Jirani, pause for two hours."
 
-<!-- SCREENSHOTS: Today page, Week page with the drift flag, /talk voice client, Fire TV check-in card. Added after F7a (clean demo data). -->
+| Today: the open alert | Week: the drift flag | `/talk`: Amina asks |
+|---|---|---|
+| <img src="docs/media/today.png" width="260" alt="Today page on Monday 10:47: no morning activity yet, alert open at level 3"> | <img src="docs/media/week.png" width="260" alt="Week page flagging night-time bathroom trips, with a bar chart of the last four weeks"> | <img src="docs/media/talk.png" width="260" alt="Voice client answering how Margaret's week was, with the weekly_report MCP tool call shown"> |
+
+<p align="center">
+  <img src="docs/media/tv-checkin.png" width="640" alt="Fire TV check-in card: Good morning Margaret, it's Jirani, with I'm OK and Call Amina buttons">
+  <br><sub>Margaret's check-in card, answered with the remote (the TV app's web build is shown). All screens are from the demo story with simulated Ring events.</sub>
+</p>
 
 ## Architecture
 
